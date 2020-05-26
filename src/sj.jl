@@ -45,7 +45,7 @@ function SDrec(::Type{T},α,X,i1,i2,j1,j2)::T where T
 	j1<i1 && return zero(T) # early out, skip lower triangular part
 
 
-	if (i2-i1)<=10 || (j2-j1)<=10 # fallback - loop over the data points
+	if (i2-i1)<=5 || (j2-j1)<=5 # fallback - loop over the data points
 		s = zero(T)
 		# @inbounds for i in i1:i2, j in j1:j2
 		# 	i>=j && continue # UGLY way to do upper triangular part. TODO: do it properly.
