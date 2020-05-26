@@ -16,35 +16,26 @@ function ϕ4extrema(a,b)
 	# xExt = (-2.8569700138728056, 1.355626179974266, 0.0, 1.355626179974266, 2.8569700138728056)
 	# yExt = (0.13912184973492348, -0.7399861849949221, 1.1968268412042982, -0.7399861849949221, 0.13912184973492348)
 	# we only need to consider x>0 since the function is even
-	xExt = (0.0, 1.355626179974266, 2.8569700138728056)
-	yExt = (1.1968268412042982, -0.7399861849949221, 0.13912184973492348)
+	xExt = (1.355626179974266, 2.8569700138728056)
+	yExt = (-0.7399861849949221, 0.13912184973492348)
 
 	# TODO: clean up code
 
-	if a < 0 < b # covers 0
-		M = yExt[1] # global maximum
-		c = max(-a,b) # move to x>0
-		m = c>xExt[2] ? yExt[2] : ϕ4(c) # covers global minimum or not?
-		return m,M
-	end
+	# the implementation assumes 0<=a<=b
 
-	if a<0
-		a,b = -b,-a # move to x>0
-	end
+	a>xExt[2] && return ϕ4(b),ϕ4(a)
 
-	a>xExt[3] && return ϕ4(b),ϕ4(a)
-
-	if a>xExt[2]
+	if a>xExt[1]
 		yb = ϕ4(b)
-		M = b>xExt[3] ? yExt[3] : yb
+		M = b>xExt[2] ? yExt[2] : yb
 		m = min(ϕ4(a),yb)
 		return m,M
 	end
 
 	ya = ϕ4(a)
-	b>xExt[3] && return yExt[2], max(ya,yExt[3])
+	b>xExt[2] && return yExt[1], max(ya,yExt[2])
 	yb = ϕ4(b)
-	b>xExt[2] && return yExt[2], max(ya,yb)
+	b>xExt[1] && return yExt[1], max(ya,yb)
 	yb,ya
 end
 
