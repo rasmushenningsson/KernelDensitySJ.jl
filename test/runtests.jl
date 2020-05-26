@@ -8,12 +8,15 @@ using Test
 
 @testset "randn" begin
 	rng = StableRNG(1234)
+	# @info "A"
 	X = randn(rng, 20)
 	@test bwsj(X)≈0.6189722 rtol=0.1
 
+	# @info "B"
 	X = randn(rng, 100)
 	@test bwsj(X)≈0.4314236 rtol=0.1
 
+	# @info "C"
 	X = randn(rng, 1000)
 	@test bwsj(X)≈0.2823561 rtol=0.1
 end
@@ -31,5 +34,4 @@ end
 	@test bwsj(sign.(X).*abs.(X).^α[6])≈0.1394881   rtol=0.1
 	@test bwsj(sign.(X).*abs.(X).^α[7])≈0.03132362  rtol=0.1
 	@test bwsj(sign.(X).*abs.(X).^α[8])≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
-
 end
