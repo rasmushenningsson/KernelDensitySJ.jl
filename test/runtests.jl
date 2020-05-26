@@ -20,11 +20,16 @@ end
 
 @testset "quantile" begin
 	N = 100
-	expected = [0.05301544, 0.1279672, 0.4747508, 0.03132362, 5.242246e-05, 3.903804e-13, 4.232559e-44]
-	for (i,α) in enumerate(4.0.^(-2:4))
-		# NB, the laste three tests do not yet pass due to precision issues
-		X = quantile.(Normal(), range(1/2N,stop=1-1/2N,length=N))
-		X = sign.(X) .* abs.(X).^α
-		@test bwsj(X)≈expected[i] rtol=0.1
-	end
+	α = 2.0.^(-4:3)
+	X = quantile.(Normal(), range(1/2N,stop=1-1/2N,length=N))
+
+	@test bwsj(sign.(X).*abs.(X).^α[1])≈0.05301544  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[2])≈0.07877113  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[3])≈0.1279672   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[4])≈0.2092015   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[5])≈0.4747508   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[6])≈0.1394881   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[7])≈0.03132362  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^α[8])≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
+
 end

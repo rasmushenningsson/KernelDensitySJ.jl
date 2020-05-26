@@ -45,7 +45,25 @@ function bwsj(X)
 	a = 0.920λ*n^(-1/7)
 	b = 0.912λ*n^(-1/9)
 	α2Constant = 1.357*(S(a,X)/T(b,X))^(1/7)
-	find_zero(h->objective(h,X,α2Constant), (0.0001,10), Bisection()) # TODO: choose range
+
+
+	# Figure out lower and upper bounds for search.
+	# The Bandwidth scales roughly with n^(-1/5). TODO: Use this fact!
+
+	lower = 0.1*λ
+	for i=1:11
+		i==11 && error("Failed to find lower bound")
+		objective(lower,X,α2Constant)>0 && break
+		lower/=10
+	end
+	upper = 1*λ
+	for i=1:11
+		i==11 && error("Failed to find upper bound")
+		objective(upper,X,α2Constant)<0 && break
+		upper*=10
+	end
+
+	find_zero(h->objective(h,X,α2Constant), (lower,upper), Bisection())
 end
 
 
