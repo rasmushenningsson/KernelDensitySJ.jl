@@ -15,7 +15,11 @@ function S(α, X)
 	n = length(X)
 	C = 1/(n*(n-1)*α^5)
 	Y = X./α
-	C * sum(ϕ4.(Y.-Y')) # TODO: fix inefficient summation. No need to allocate N^2 matrix.
+	s = zero(eltype(Y))
+	for yi in Y, yj in Y # TODO: fix inefficient summation.
+		s += ϕ4(yi-yj)
+	end
+	C * s
 end
 
 function T(b, X)
@@ -23,7 +27,11 @@ function T(b, X)
 	n = length(X)
 	C = -1/(n*(n-1)*b^7)
 	Y = X./b
-	C * sum(ϕ6.(Y.-Y')) # TODO: fix inefficient summation. No need to allocate N^2 matrix.
+	s = zero(eltype(Y))
+	for yi in Y, yj in Y # TODO: fix inefficient summation.
+		s += ϕ6(yi-yj)
+	end
+	C * s
 end
 
 
