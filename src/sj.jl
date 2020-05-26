@@ -47,47 +47,29 @@ function SDrec(::Type{T},α,X,i1,i2,j1,j2)::T where T
 
 	if (i2-i1)<=5 || (j2-j1)<=5 # fallback - loop over the data points
 		s = zero(T)
-		# @inbounds for i in i1:i2, j in j1:j2
-		# 	i>=j && continue # UGLY way to do upper triangular part. TODO: do it properly.
-		# 	s += ϕ4((X[i]-X[j])/α)
-		# end
-		@inbounds for i in i1:i2
-			for j in max(i+1,j1):j2 # upper triangular part
-				s += ϕ4((X[i]-X[j])/α)
+
+		if i1==j1
+			@inbounds for i in i1:i2
+				for j in max(i+1,j1):j2 # upper triangular part
+					s += ϕ4((X[i]-X[j])/α)
+				end
+			end
+		else
+			@inbounds for i in i1:i2
+				for j in j1:j2
+					s += ϕ4((X[i]-X[j])/α)
+				end
 			end
 		end
 		return s
 	end
 
-
-	if i1!=j1# && (i2-i1)<20
+	if i1!=j1 # only consider approximation if it's not the same interval
 		npoints = (i2-i1+1)*(j2-j1+1)
-		# NB: these are not proper bounds since ϕ4 is not monotone (even for x>0)
-		# lb = npoints*ϕ4((X[j2]-X[i1])/α)
-		# ub = npoints*ϕ4((X[j1]-X[i2])/α)
-
 		lb,ub = npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α) # proper bounds
 
-		# @show i1:i2,j1:j2,lb,ub
-		# if abs(ub-lb) < 0.01 # TESTING. (abs() because not monotone which potentially creates weird issues)
 		if ub-lb < 1 # 20 # 0.1 # 0.01 # what is a good bound?
-			# @show i1:i2,j1:j2,lb,ub
-			#return (i2-i1+1)*(j2-j1+1)*(lb+ub)/2 # approximation
-			approx = (lb+ub)/2 # approximation
-			return approx
-
-			# # DEBUG
-			# s = zero(T)
-			# @inbounds for i in i1:i2
-			# 	for j in max(i+1,j1):j2 # upper triangular part
-			# 		s += ϕ4((X[i]-X[j])/α)
-			# 	end
-			# end
-
-			# d = (abs(approx-s))
-			# # d>1 && @show (i1,i2,j1,j2,d)
-			# return approx
-			# # return s
+			return (lb+ub)/2 # approximation
 		end
 	end
 
