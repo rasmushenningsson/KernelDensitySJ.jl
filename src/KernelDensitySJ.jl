@@ -1,5 +1,10 @@
 module KernelDensitySJ
 
-# Write your package code here.
+using Statistics
+using Roots
+
+export bwsj
+
+include("sj.jl")
 
 end
