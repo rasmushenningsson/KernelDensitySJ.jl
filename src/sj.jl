@@ -45,7 +45,7 @@ function bwsj(X)
 	a = 0.920λ*n^(-1/7)
 	b = 0.912λ*n^(-1/9)
 	α2Constant = 1.357*(S(a,X)/T(b,X))^(1/7)
-	find_zero(h->objective(h,X,α2Constant), (0.01,10), Bisection()) # TODO: choose range
+	find_zero(h->objective(h,X,α2Constant), (0.0001,10), Bisection()) # TODO: choose range
 end
 
 
