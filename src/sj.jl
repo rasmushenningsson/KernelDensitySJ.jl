@@ -6,8 +6,11 @@
 
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
 
-ϕ4(x) = (x^4 - 6x^2 + 3) * ϕ(x)
-ϕ6(x) = (x^6 - 15x^4 + 45x^2 - 15) * ϕ(x)
+# ϕ4(x) = (x^4 - 6x^2 + 3) * ϕ(x) # slow
+# ϕ6(x) = (x^6 - 15x^4 + 45x^2 - 15) * ϕ(x) # slow
+
+ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
+ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
 
 
 function ϕ4extrema(a,b)
@@ -67,7 +70,7 @@ isexact(b::Bounds) = b.lb===b.ub
 function bounds(::Type{T}, block::Block, α, X) where T
 	i1,i2,j1,j2 = block.i1,block.i2,block.j1,block.j2
 
-	if (i2-i1)<=5 || (j2-j1)<=5 # fallback - loop over the data points
+	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
 		# @info "Fallback for block $block"
 		s = zero(T)
 		if i1==j1
@@ -87,7 +90,8 @@ function bounds(::Type{T}, block::Block, α, X) where T
 	elseif i1==j1 # block on the diagonal
 		@assert i2==j2
 		npoints = div((i2-i1+1)*(i2-i1),2)
-		lb,ub = npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
+		# lb,ub = npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
+		lb,ub = npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this?
 		Bounds(lb,ub)
 	else
 		npoints = (i2-i1+1)*(j2-j1+1)
@@ -107,17 +111,20 @@ function ssign(::Type{T},α,X,C)::Int where T
 
 	root = Block(1,n,1,n)
 	queue = PriorityQueue{Block,Bounds}()
-	globalBounds = bounds(T, root, α, X)
-	enqueue!(queue,root,globalBounds)
+	rootBounds = bounds(T, root, α, X)
+	enqueue!(queue,root,rootBounds)
+
+	lb,ub = rootBounds.lb,rootBounds.ub
 
 	while true
-		globalBounds.lb > C && return 1
-		globalBounds.ub < C && return -1
+		lb > C && return 1
+		ub < C && return -1
 		isempty(queue) && break
 		block,blockBounds = dequeue_pair!(queue)
 
 		# remove existing bounds
-		globalBounds = Bounds(globalBounds.lb-blockBounds.lb, globalBounds.ub-blockBounds.ub)
+		lb -= blockBounds.lb
+		ub -= blockBounds.ub
 
 		# create child blocks
 		midI = div(block.i1+block.i2,2)
@@ -125,24 +132,28 @@ function ssign(::Type{T},α,X,C)::Int where T
 
 		child11 = Block(block.i1, midI, block.j1, midJ)
 		childBounds11 = bounds(T, child11, α, X)
-		globalBounds = Bounds(globalBounds.lb+childBounds11.lb, globalBounds.ub+childBounds11.ub)
+		lb += childBounds11.lb
+		ub += childBounds11.ub
 		isexact(childBounds11) || enqueue!(queue, child11, childBounds11)
 
 		child12 = Block(block.i1, midI, midJ+1, block.j2)
 		childBounds12 = bounds(T, child12, α, X)
-		globalBounds = Bounds(globalBounds.lb+childBounds12.lb, globalBounds.ub+childBounds12.ub)
+		lb += childBounds12.lb
+		ub += childBounds12.ub
 		isexact(childBounds12) || enqueue!(queue, child12, childBounds12)
 
 		if block.j1>block.i1 # only care about upper triangular part
 			child21 = Block(midI+1, block.i2, block.j1, midJ)
 			childBounds21 = bounds(T, child21, α, X)
-			globalBounds = Bounds(globalBounds.lb+childBounds21.lb, globalBounds.ub+childBounds21.ub)
+			lb += childBounds21.lb
+			ub += childBounds21.ub
 			isexact(childBounds21) || enqueue!(queue, child21, childBounds21)
 		end
 
 		child22 = Block(midI+1, block.i2, midJ+1, block.j2)
 		childBounds22 = bounds(T, child22, α, X)
-		globalBounds = Bounds(globalBounds.lb+childBounds22.lb, globalBounds.ub+childBounds22.ub)
+		lb += childBounds22.lb
+		ub += childBounds22.ub
 		isexact(childBounds22) || enqueue!(queue, child22, childBounds22)
 	end
 
