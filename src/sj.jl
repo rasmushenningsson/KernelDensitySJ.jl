@@ -138,7 +138,7 @@ function objective(h, X, α2Constant)
 end
 
 
-function _bwsj(X)
+function _bwsj(X; rtol=0.1)
 	n = length(X)
 	q25,q75 = quantile(X,(0.25,0.75))
 	λ = min(q75-q25, std(X)*1.349) # Givivng the same scale estimate as e.g. the KernSmooth R package.
@@ -163,9 +163,9 @@ function _bwsj(X)
 		upper*=10
 	end
 
-	find_zero(h->objective(h,X,α2Constant), (lower,upper), Bisection())
+	find_zero(h->objective(h,X,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
 
 
-bwsj(X) = _bwsj(issorted(X) ? X : sort(X))
+bwsj(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
 
