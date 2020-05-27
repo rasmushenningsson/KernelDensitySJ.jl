@@ -22,24 +22,20 @@ function ϕ4extrema(a,b)
 	xExt = (1.355626179974266, 2.8569700138728056)
 	yExt = (-0.7399861849949221, 0.13912184973492348)
 
-	# TODO: clean up code
-
 	# the implementation assumes 0<=a<=b
-
-	a>xExt[2] && return ϕ4(b),ϕ4(a)
-
-	if a>xExt[1]
-		yb = ϕ4(b)
-		M = b>xExt[2] ? yExt[2] : yb
-		m = min(ϕ4(a),yb)
-		return m,M
+	if b<=xExt[1] || a>=xExt[2]
+		ϕ4(b),ϕ4(a) # decreasing function in these intervals
+	elseif a>=xExt[1]
+		if b<=xExt[2]
+			ϕ4(a),ϕ4(b) # increasing function in this interval
+		else
+			min(ϕ4(a),ϕ4(b)),yExt[2] # the function covers one local extrema (maxima)
+		end
+	elseif b<=xExt[2]
+		yExt[1],max(ϕ4(a),ϕ4(b)) # the function covers one local extrema (minima)
+	else
+		yExt[1], max(ϕ4(a),yExt[2]) # the function covers two local extrema
 	end
-
-	ya = ϕ4(a)
-	b>xExt[2] && return yExt[1], max(ya,yExt[2])
-	yb = ϕ4(b)
-	b>xExt[1] && return yExt[1], max(ya,yb)
-	yb,ya
 end
 
 
@@ -182,9 +178,10 @@ function _bwsj_bounded(X; rtol=0.1)
 	b = 0.912λ*n^(-1/9)
 	α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
 
-	# Decide if we need to deal with bounds better
-	lower = λ*1e-3
-	upper = λ*1e3
+	# Decide if we need to deal with bounds better.
+	# But note that execution is very fast for bad guesses for h.
+	lower = λ*1e-9
+	upper = λ*1e9
 
 	find_zero(h->objectivesign(h,X,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
