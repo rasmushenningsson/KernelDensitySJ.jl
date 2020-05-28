@@ -43,29 +43,18 @@ end
 #---------------------------------------------------------------------------------------------------
 # New algorithm test
 
-
 struct Block
 	i1::Int
 	i2::Int
 	j1::Int
 	j2::Int
-end
-
-struct Bounds
 	lb::Float64
 	ub::Float64
 end
-function Base.isless(b1::Bounds,b2::Bounds)
-	r1 = b1.ub-b1.lb
-	r2 = b2.ub-b2.lb
-	r1!=r2 ? isless(r2,r1) : isless(b2.lb,b1.lb) # NB: this order to sort by max instead of mean
-end
-isexact(b::Bounds) = b.lb===b.ub
+Base.isless(b1::Block,b2::Block) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
 
 
-function bounds(::Type{T}, block::Block, α, X) where T
-	i1,i2,j1,j2 = block.i1,block.i2,block.j1,block.j2
-
+function bounds(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
 	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
 		# @info "Fallback for block $block"
 		s = zero(T)
@@ -82,17 +71,15 @@ function bounds(::Type{T}, block::Block, α, X) where T
 				end
 			end
 		end
-		Bounds(s,s) # exact bounds
+		s,s # exact bounds
 	elseif i1==j1 # block on the diagonal
 		@assert i2==j2
 		npoints = div((i2-i1+1)*(i2-i1),2)
-		# lb,ub = npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
-		lb,ub = npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this?
-		Bounds(lb,ub)
+		# npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
+		npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this?
 	else
 		npoints = (i2-i1+1)*(j2-j1+1)
-		lb,ub = npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
-		Bounds(lb,ub)
+		npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
 	end
 end
 
@@ -105,52 +92,45 @@ function ssign(::Type{T},α,X,C)::Int where T
 	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
 	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
 
-	root = Block(1,n,1,n)
-	queue = PriorityQueue{Block,Bounds}()
-	rootBounds = bounds(T, root, α, X)
-	enqueue!(queue,root,rootBounds)
-
-	lb,ub = rootBounds.lb,rootBounds.ub
+	heap = BinaryMaxHeap{Block}()
+	lb,ub = bounds(T, 1, n, 1, n, α, X)
+	push!(heap,Block(1,n,1,n,lb,ub))
 
 	while true
 		lb > C && return 1
 		ub < C && return -1
-		isempty(queue) && break
-		block,blockBounds = dequeue_pair!(queue)
+		isempty(heap) && break
+		block = pop!(heap)
 
 		# remove existing bounds
-		lb -= blockBounds.lb
-		ub -= blockBounds.ub
+		lb -= block.lb
+		ub -= block.ub
 
 		# create child blocks
 		midI = div(block.i1+block.i2,2)
 		midJ = div(block.j1+block.j2,2)
 
-		child11 = Block(block.i1, midI, block.j1, midJ)
-		childBounds11 = bounds(T, child11, α, X)
-		lb += childBounds11.lb
-		ub += childBounds11.ub
-		isexact(childBounds11) || enqueue!(queue, child11, childBounds11)
+		lb11,ub11 = bounds(T, block.i1, midI, block.j1, midJ, α, X)
+		lb += lb11
+		ub += ub11
+		lb11!=ub11 && push!(heap, Block(block.i1, midI, block.j1, midJ, lb11, ub11))
 
-		child12 = Block(block.i1, midI, midJ+1, block.j2)
-		childBounds12 = bounds(T, child12, α, X)
-		lb += childBounds12.lb
-		ub += childBounds12.ub
-		isexact(childBounds12) || enqueue!(queue, child12, childBounds12)
+		lb12,ub12 = bounds(T, block.i1, midI, midJ+1, block.j2, α, X)
+		lb += lb12
+		ub += ub12
+		lb12!=ub12 && push!(heap, Block(block.i1, midI, midJ+1, block.j2, lb12, ub12))
 
 		if block.j1>block.i1 # only care about upper triangular part
-			child21 = Block(midI+1, block.i2, block.j1, midJ)
-			childBounds21 = bounds(T, child21, α, X)
-			lb += childBounds21.lb
-			ub += childBounds21.ub
-			isexact(childBounds21) || enqueue!(queue, child21, childBounds21)
+			lb21,ub21 = bounds(T, midI+1, block.i2, block.j1, midJ, α, X)
+			lb += lb21
+			ub += ub21
+			lb21!=ub21 && push!(heap, Block(midI+1, block.i2, block.j1, midJ, lb21, ub21))
 		end
 
-		child22 = Block(midI+1, block.i2, midJ+1, block.j2)
-		childBounds22 = bounds(T, child22, α, X)
-		lb += childBounds22.lb
-		ub += childBounds22.ub
-		isexact(childBounds22) || enqueue!(queue, child22, childBounds22)
+		lb22,ub22 = bounds(T, midI+1, block.i2, midJ+1, block.j2, α, X)
+		lb += lb22
+		ub += ub22
+		lb22!=ub22 && push!(heap, Block(midI+1, block.i2, midJ+1, block.j2, lb22, ub22))
 	end
 
 	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
@@ -235,7 +215,7 @@ end
 
 
 # assumes X is sorted
-function SD(α, X::AbstractArray{T}) where T
+function SDapprox(α, X::AbstractArray{T}) where T
 	# @show α
 	n = length(X)
 	s = 2*SDrec(promote_type(T,Float64),α,X,1,n,1,n)
@@ -250,7 +230,7 @@ end
 
 
 # unoptimized version
-function SDreference(α, X::AbstractArray{T}) where T
+function SD(α, X::AbstractArray{T}) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
 	C = 1/(n*(n-1)*α^5)
