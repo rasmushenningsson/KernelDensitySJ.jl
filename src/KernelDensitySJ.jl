@@ -6,6 +6,7 @@ using Roots
 
 export bwsj
 
+include("approximations.jl")
 include("sj.jl")
 
 end

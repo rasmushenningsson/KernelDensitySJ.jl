@@ -55,6 +55,8 @@ Base.isless(b1::Block,b2::Block) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
 
 
 function bounds(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
+	# @show i1,i2,j1,j2,α
+
 	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
 		# @info "Fallback for block $block"
 		s = zero(T)
@@ -76,7 +78,45 @@ function bounds(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
 		@assert i2==j2
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		# npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
-		npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this?
+		npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this.
+	else
+		npoints = (i2-i1+1)*(j2-j1+1)
+		# npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
+
+		# TODO: compute and cache means more efficiently
+		meanI = mean(view(X,i1:i2))/α
+		meanJ = mean(view(X,j1:j2))/α
+		kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
+
+		z = meanJ-meanI
+		npoints .* (kl*z+ml, ku*z+mu)
+
+	end
+end
+
+function boundsOld(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
+	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
+		# @info "Fallback for block $block"
+		s = zero(T)
+		if i1==j1
+			@inbounds for i in i1:i2
+				for j in max(i+1,j1):j2 # upper triangular part
+					s += ϕ4((X[i]-X[j])/α)
+				end
+			end
+		else
+			@inbounds for i in i1:i2
+				for j in j1:j2
+					s += ϕ4((X[i]-X[j])/α)
+				end
+			end
+		end
+		s,s # exact bounds
+	elseif i1==j1 # block on the diagonal
+		@assert i2==j2
+		npoints = div((i2-i1+1)*(i2-i1),2)
+		# npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
+		npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this.
 	else
 		npoints = (i2-i1+1)*(j2-j1+1)
 		npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
