@@ -46,3 +46,25 @@ function ϕ4affinebounds(a,b)::Tuple{Float64,Float64,Float64,Float64}
 		k2,m2,k1,m1
 	end
 end
+
+
+
+# test
+function testaffine(N)
+	k = rand(1:4)
+	x = (0.,0.6167065901925941, 1.8891758777537109, 3.3242574335521193, 10.)
+	m = x[k]
+	M = x[k+1]
+	a,b = extrema(m.+(M-m)*rand(2))
+
+	kl,ml,ku,mu = ϕ4affinebounds(a,b)
+
+	Z = a .+ (b-a)*rand(N)
+
+	Yl = kl*Z .+ ml
+	Y  = ϕ4.(Z)
+	Yu = ku*Z .+ mu
+
+	@assert all(Yl .<= Y .+ 1e-9) "$a, $b"
+	@assert all(Y .<= Yu .+ 1e-9) "$a, $b"
+end
