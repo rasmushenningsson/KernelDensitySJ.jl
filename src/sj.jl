@@ -78,7 +78,13 @@ function bounds(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
 		@assert i2==j2
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		# npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
-		npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this.
+		#npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: use affine bounds
+
+		kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
+		# dsum = sum(i->(2(i-i1+1)-(i2-i1+1)-1)*X[i], i1:i2)
+		# dsum = sum(i->2i-2i1+2-i2+i1-1-1)*X[i], i1:i2)
+		z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
+		(kl*z + npoints*ml, ku*z + npoints*mu)
 	else
 		npoints = (i2-i1+1)*(j2-j1+1)
 		# npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
