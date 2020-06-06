@@ -100,7 +100,6 @@ function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vecto
 	# special case for final one or two (possibly partial) subintervals
 
 	k = nbrRanges2
-	nbrLast = mod1(N,intervalSize)
 	if isodd(nbrRanges)
 		intervalSums2[k] = intervalSums[2k-1]
 		incSums2[k] = incSums[2k-1]
@@ -108,7 +107,7 @@ function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vecto
 	else
 		intervalSums2[k] = intervalSums[2k-1] + intervalSums[2k]
 		incSums2[k] = incSums[2k-1] + incSums[2k] + intervalSize*intervalSums[2k]
-		decSums2[k] = decSums[2k-1] + decSums[2k] + nbrLast*intervalSums[2k-1]
+		decSums2[k] = decSums[2k-1] + decSums[2k] + mod1(N,intervalSize)*intervalSums[2k-1]
 	end
 
 	intervalSums2, incSums2, decSums2
@@ -121,7 +120,6 @@ struct SumTree{T}
 	incSums::Vector{Vector{T}}
 	decSums::Vector{Vector{T}}
 end
-
 function SumTree(X, leafSize)
 	intervalSums,incSums,decSums = leafsums(X,leafSize)
 	allIntervalSums,allIncSums,allDecSums = [intervalSums],[incSums],[decSums]
@@ -137,11 +135,188 @@ function SumTree(X, leafSize)
 
 	SumTree(leafSize, reverse(allIntervalSums), reverse(allIncSums), reverse(allDecSums))
 end
+depth(t::SumTree) = length(t.intervalSums)
 
 
 
 #---------------------------------------------------------------------------------------------------
-# New algorithm test
+# New algorithm v2
+
+struct Block2
+	depth::Int
+	k1::Int
+	k2::Int
+	lb::Float64
+	ub::Float64
+end
+Base.isless(b1::Block2,b2::Block2) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
+
+
+function ϕ4sum(::Type{T}, k1, k2, α, X, leafSize) where T
+	N = length(X)
+
+	i1 = (k1-1)*leafSize+1
+	i2 = min(k1*leafSize, N)
+
+	s = zero(T)
+	if k1==k2
+		@inbounds for i in i1:i2
+			for j in i+1:i2 # upper triangular part
+				s += ϕ4((X[i]-X[j])/α)
+			end
+		end
+	else
+		j1 = (k2-1)*leafSize+1
+		j2 = min(k2*leafSize, N)
+
+		@inbounds for i in i1:i2
+			for j in j1:j2
+				s += ϕ4((X[i]-X[j])/α)
+			end
+		end
+	end
+	s # exact
+end
+
+
+function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
+	N = length(X)
+	intervalSize = tree.leafSize * 2^(length(tree.intervalSums)-d)
+
+	i1 = (k1-1)*intervalSize+1
+	i2 = min(k1*intervalSize, N)
+
+	if k1==k2 # block on the diagonal
+		npoints = div((i2-i1+1)*(i2-i1),2)
+		kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
+		# dsum = sum(i->(2(i-i1+1)-(i2-i1+1)-1)*X[i], i1:i2)
+		# dsum = sum(i->2i-2i1+2-i2+i1-1-1)*X[i], i1:i2)
+		# z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
+
+		z = tree.incSums[d][k1] - tree.decSums[d][k1]
+		(kl*z + npoints*ml, ku*z + npoints*mu)
+	else
+		j1 = (k2-1)*intervalSize+1
+		j2 = min(k2*intervalSize, N)
+		Ni = intervalSize
+		Nj = (j2-j1+1)
+		npoints = Ni*Nj
+
+		meanI = tree.intervalSums[d][k1]/(Ni*α)
+		meanJ = tree.intervalSums[d][k2]/(Nj*α)
+
+		kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
+
+		z = meanJ-meanI
+		npoints .* (kl*z+ml, ku*z+mu)
+
+	end
+end
+
+
+# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
+# returns sign(s-C)
+function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
+	n = length(X)
+	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
+	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
+
+	heap = BinaryMaxHeap{Block2}()
+	lb,ub = bounds2(T,1,1,1,α,X,tree)
+	push!(heap,Block2(1,1,1,lb,ub))
+
+	while true
+		lb > C && return 1
+		ub < C && return -1
+		isempty(heap) && break
+		block = pop!(heap)
+
+		# remove existing bounds
+		lb -= block.lb
+		ub -= block.ub
+
+
+		if block.depth >= depth(tree) # Fallback to exact sum
+			s = ϕ4sum(T, block.k1, block.k2, α, X, tree.leafSize)
+			lb += s
+			ub += s
+		else # create child blocks
+			d = block.depth+1
+			k1 = 2block.k1-1 # first child
+			k2 = 2block.k2-1 # first child
+			nbrBlocks = length(tree.intervalSums[d])
+
+			lb11,ub11 = bounds2(T, d, k1, k2, α, X, tree)
+			lb += lb11
+			ub += ub11
+			lb11!=ub11 && push!(heap, Block2(d, k1, k2, lb11, ub11))
+
+			if k1<k2<=nbrBlocks # only care about upper triangular part
+				lb21,ub21 = bounds2(T, d, k1+1, k2, α, X, tree)
+				lb += lb21
+				ub += ub21
+				lb21!=ub21 && push!(heap, Block2(d, k1+1, k2, lb21, ub21))
+			end
+
+			if k2<nbrBlocks
+				lb12,ub12 = bounds2(T, d, k1, k2+1, α, X, tree)
+				lb += lb12
+				ub += ub12
+				lb12!=ub12 && push!(heap, Block2(d, k1, k2+1, lb12, ub12))
+
+				lb22,ub22 = bounds2(T, d, k1+1, k2+1, α, X, tree)
+				lb += lb22
+				ub += ub22
+				lb22!=ub22 && push!(heap, Block2(d, k1+1, k2+1, lb22, ub22))
+			end
+		end
+	end
+
+	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
+	return 0
+end
+
+
+
+
+# Computes the sign of the objective function by gradually approximating using lower/upper bounds
+function objectivesign2(h, X::AbstractArray{T}, tree::SumTree, α2Constant) where T
+	n = length(X)
+	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
+
+	C = (n-1)*α2Constant^5*h^(-10/7)/(2*√π)
+	ssign2(promote_type(Float64,T), α2, X, tree, C)
+end
+
+
+function _bwsj_bounded2(X; rtol=0.1)
+	n = length(X)
+	q25,q75 = quantile(X,(0.25,0.75))
+	λ = min(q75-q25, std(X)*1.349) # Givivng the same scale estimate as e.g. the KernSmooth R package.
+	a = 0.920λ*n^(-1/7)
+	b = 0.912λ*n^(-1/9)
+	α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
+
+	tree = SumTree(X,10)
+
+	# Decide if we need to deal with bounds better.
+	# But note that execution is very fast for bad guesses for h.
+	lower = λ*1e-9
+	upper = λ*1e9
+
+	find_zero(h->objectivesign2(h,X,tree,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
+end
+
+
+bwsj_bounded2(X; kwargs...) = _bwsj_bounded2(issorted(X) ? X : sort(X); kwargs...)
+
+
+
+
+
+#---------------------------------------------------------------------------------------------------
+# New algorithm v1
+
 
 struct Block
 	i1::Int
@@ -155,52 +330,6 @@ Base.isless(b1::Block,b2::Block) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
 
 
 function bounds(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
-	# @show i1,i2,j1,j2,α
-
-	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
-		# @info "Fallback for block $block"
-		s = zero(T)
-		if i1==j1
-			@inbounds for i in i1:i2
-				for j in max(i+1,j1):j2 # upper triangular part
-					s += ϕ4((X[i]-X[j])/α)
-				end
-			end
-		else
-			@inbounds for i in i1:i2
-				for j in j1:j2
-					s += ϕ4((X[i]-X[j])/α)
-				end
-			end
-		end
-		s,s # exact bounds
-	elseif i1==j1 # block on the diagonal
-		@assert i2==j2
-		npoints = div((i2-i1+1)*(i2-i1),2)
-		# npoints.*(-0.7399861849949221, 1.1968268412042982) # TODO: improve this
-		#npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: use affine bounds
-
-		kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
-		# dsum = sum(i->(2(i-i1+1)-(i2-i1+1)-1)*X[i], i1:i2)
-		# dsum = sum(i->2i-2i1+2-i2+i1-1-1)*X[i], i1:i2)
-		z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
-		(kl*z + npoints*ml, ku*z + npoints*mu)
-	else
-		npoints = (i2-i1+1)*(j2-j1+1)
-		# npoints.*ϕ4extrema((X[j1]-X[i2])/α, (X[j2]-X[i1])/α)
-
-		# TODO: compute and cache means more efficiently
-		meanI = mean(view(X,i1:i2))/α
-		meanJ = mean(view(X,j1:j2))/α
-		kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
-
-		z = meanJ-meanI
-		npoints .* (kl*z+ml, ku*z+mu)
-
-	end
-end
-
-function boundsOld(::Type{T}, i1, i2, j1, j2, α, X)::Tuple{T,T} where T
 	if (i2-i1)<=20 || (j2-j1)<=20 # fallback - loop over the data points
 		# @info "Fallback for block $block"
 		s = zero(T)
