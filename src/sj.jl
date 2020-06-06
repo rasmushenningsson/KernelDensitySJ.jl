@@ -187,14 +187,21 @@ function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
 	i2 = min(k1*intervalSize, N)
 
 	if k1==k2 # block on the diagonal
+		# NEW
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
-		# dsum = sum(i->(2(i-i1+1)-(i2-i1+1)-1)*X[i], i1:i2)
-		# dsum = sum(i->2i-2i1+2-i2+i1-1-1)*X[i], i1:i2)
-		# z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
-
-		z = tree.incSums[d][k1] - tree.decSums[d][k1]
+		z = (tree.incSums[d][k1] - tree.decSums[d][k1])/α
 		(kl*z + npoints*ml, ku*z + npoints*mu)
+
+		# # intermediate
+		# npoints = div((i2-i1+1)*(i2-i1),2)
+		# kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
+		# z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
+		# (kl*z + npoints*ml, ku*z + npoints*mu)
+
+		# # old
+		# npoints = div((i2-i1+1)*(i2-i1),2)
+		# npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this.
 	else
 		j1 = (k2-1)*intervalSize+1
 		j2 = min(k2*intervalSize, N)
@@ -230,6 +237,7 @@ function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
 		ub < C && return -1
 		isempty(heap) && break
 		block = pop!(heap)
+
 
 		# remove existing bounds
 		lb -= block.lb
@@ -301,8 +309,10 @@ function _bwsj_bounded2(X; rtol=0.1)
 
 	# Decide if we need to deal with bounds better.
 	# But note that execution is very fast for bad guesses for h.
-	lower = λ*1e-9
-	upper = λ*1e9
+
+	# The Bandwidth scales roughly with n^(-1/5)
+	lower = λ*n^(-1/5)*1e-9
+	upper = λ*n^(-1/5)*1e9
 
 	find_zero(h->objectivesign2(h,X,tree,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
@@ -435,8 +445,8 @@ function _bwsj_bounded(X; rtol=0.1)
 
 	# Decide if we need to deal with bounds better.
 	# But note that execution is very fast for bad guesses for h.
-	lower = λ*1e-9
-	upper = λ*1e9
+	lower = λ*n^(-1/5)*1e-9
+	upper = λ*n^(-1/5)*1e9
 
 	find_zero(h->objectivesign(h,X,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
@@ -578,4 +588,5 @@ end
 
 
 bwsj(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
+# bwsj(X; kwargs...) = _bwsj_bounded2(issorted(X) ? X : sort(X); kwargs...)
 
