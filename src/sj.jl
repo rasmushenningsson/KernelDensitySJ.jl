@@ -187,11 +187,16 @@ function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
 	i2 = min(k1*intervalSize, N)
 
 	if k1==k2 # block on the diagonal
-		# NEW
+		# New
+		# npoints = div((i2-i1+1)*(i2-i1),2)
+		# kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
+		# z = (tree.incSums[d][k1] - tree.decSums[d][k1])/α
+		# (kl*z + npoints*ml, ku*z + npoints*mu)
+
+		# New V2
 		npoints = div((i2-i1+1)*(i2-i1),2)
-		kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
-		z = (tree.incSums[d][k1] - tree.decSums[d][k1])/α
-		(kl*z + npoints*ml, ku*z + npoints*mu)
+		x = (tree.incSums[d][k1] - tree.decSums[d][k1])/(npoints*α)
+		ϕ4bounds(0.0, (X[i2]-X[i1])/α, x, npoints)
 
 		# # intermediate
 		# npoints = div((i2-i1+1)*(i2-i1),2)
@@ -212,11 +217,13 @@ function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
 		meanI = tree.intervalSums[d][k1]/(Ni*α)
 		meanJ = tree.intervalSums[d][k2]/(Nj*α)
 
-		kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
+		# New
+		# kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
+		# z = meanJ-meanI
+		# npoints .* (kl*z+ml, ku*z+mu)
 
-		z = meanJ-meanI
-		npoints .* (kl*z+ml, ku*z+mu)
-
+		# New v2
+		ϕ4bounds((X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI, npoints)
 	end
 end
 
@@ -232,17 +239,19 @@ function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
 	lb,ub = bounds2(T,1,1,1,α,X,tree)
 	push!(heap,Block2(1,1,1,lb,ub))
 
+	# it=1
 	while true
 		lb > C && return 1
 		ub < C && return -1
 		isempty(heap) && break
 		block = pop!(heap)
 
+		# @show it,length(heap),block.depth,block.k1,block.k2,block.ub-block.lb,ub-lb
+		# it+=1
 
 		# remove existing bounds
 		lb -= block.lb
 		ub -= block.ub
-
 
 		if block.depth >= depth(tree) # Fallback to exact sum
 			s = ϕ4sum(T, block.k1, block.k2, α, X, tree.leafSize)
@@ -250,8 +259,8 @@ function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
 			ub += s
 		else # create child blocks
 			d = block.depth+1
-			k1 = 2block.k1-1 # first child
-			k2 = 2block.k2-1 # first child
+			k1 = 2block.k1-1 # first child in first direction
+			k2 = 2block.k2-1 # first child in second direction
 			nbrBlocks = length(tree.intervalSums[d])
 
 			lb11,ub11 = bounds2(T, d, k1, k2, α, X, tree)

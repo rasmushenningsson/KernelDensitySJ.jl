@@ -3,6 +3,56 @@
 ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x))
 
 
+
+function ϕ4bounds(a,b,x,npoints)
+	# TODO: Use a cache instead of computing affine approximation every time?
+	@assert 0<=a<=x<=b "$a, $x, $b"
+
+	breakpoints = (0.6167065901925941, 1.8891758777537109, 3.3242574335521193)
+
+	if b-a < 1e-9 # to avoid div by zero
+		y = ϕ4((a+b)/2)
+		return 0.,y,0.,y
+	end
+
+	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3])
+	bi = (b>breakpoints[1]) + (b>breakpoints[2]) + (b>breakpoints[3])
+
+	if ai!=bi # not in an interval where the function is convex/concave.
+		# TODO: improve fallback.
+		m,M = npoints.*ϕ4extrema(a,b)
+		return m,M
+	end
+
+	ya,yb = ϕ4(a),ϕ4(b)
+
+	# line above (convex) or below (concave) ϕ4 in the interval
+	k1 = (yb-ya) / (b-a)
+	m1 = ya - k1*a
+
+	# # tangent line at midpoint, i.e.
+	# # line below (convex) or above (concave) ϕ4 in the interval
+	# mid = (a+b)/2
+	# k2 = ϕ5(mid)
+	# m2 = ϕ4(mid) - k2*mid
+
+
+	# lower bound (convex) or upper bound (concave) using Jensen's inqueality.
+	y1 = ϕ4(x)*npoints
+
+
+	if ai&1 == 0 # concave
+		# k1,m1,k2,m2
+		npoints*(k1*x+m1), y1
+	else # convex
+		# k2,m2,k1,m1
+		y1, npoints*(k1*x+m1)
+		# npoints .* (kl*z+ml, ku*z+mu)
+	end
+end
+
+
+
 """
 Compute linear functions that bound ϕ⁽⁴⁾(x) from below and above on the given interval.
 Returns kₗ,mₗ,kᵤ,mᵤ.
