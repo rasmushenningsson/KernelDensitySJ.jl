@@ -229,24 +229,20 @@ end
 
 
 # Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
-# returns sign(s-C)
-function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
-	n = length(X)
-	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
-	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
-
+# returns lower and upper bounds for s, terminating when pred(lowerbound,upperbound) returns true
+function ssumapprox(::Type{T},α,X,tree::SumTree,pred::Function)::Tuple{T,T} where T
 	heap = BinaryMaxHeap{Block2}()
 	lb,ub = bounds2(T,1,1,1,α,X,tree)
 	push!(heap,Block2(1,1,1,lb,ub))
 
 	# it=1
-	while true
-		lb > C && return 1
-		ub < C && return -1
+	while !pred(lb,ub)
+		# lb > C && return 1
+		# ub < C && return -1
 		isempty(heap) && break
 		block = pop!(heap)
 
-		# @show it,length(heap),block.depth,block.k1,block.k2,block.ub-block.lb,ub-lb
+		# mod(it,1000)==0 && @show it,length(heap),block.depth,block.k1,block.k2,block.ub-block.lb,ub-lb,(lb,ub)
 		# it+=1
 
 		# remove existing bounds
@@ -289,11 +285,13 @@ function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
 		end
 	end
 
-	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
-	return 0
+	# @warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
+	# return 0
+	lb,ub
 end
 
-
+intervalcontains(C) = (lb,ub)->(lb<=C<=ub)
+intervalrtol(rtol) = (lb,ub)->isapprox(lb,ub;rtol=rtol)
 
 
 # Computes the sign of the objective function by gradually approximating using lower/upper bounds
@@ -302,19 +300,37 @@ function objectivesign2(h, X::AbstractArray{T}, tree::SumTree, α2Constant) wher
 	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
 
 	C = (n-1)*α2Constant^5*h^(-10/7)/(2*√π)
-	ssign2(promote_type(Float64,T), α2, X, tree, C)
+	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
+	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
+
+	# ssign2(promote_type(Float64,T), α2, X, tree, C)
+	lb,ub = ssumapprox(promote_type(Float64,T), α2, X, tree, !intervalcontains(C))
+	lb > C && return 1
+	ub < C && return -1
+	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
+	return 0
+end
+
+function SD_bounded2(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
+	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
+	n = length(X)
+	lb,ub = ssumapprox(promote_type(Float64,T), α, X, tree, intervalrtol(rtol))
+	s = (lb+ub) + n*1.1968268412042982 # 2*(lb+ub)/2 + n*ϕ4(0) - diagonal entries
+	s/(α^5*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and TD
 end
 
 
 function _bwsj_bounded2(X; rtol=0.1)
 	n = length(X)
+	tree = SumTree(X,10)
+
 	q25,q75 = quantile(X,(0.25,0.75))
 	λ = min(q75-q25, std(X)*1.349) # Givivng the same scale estimate as e.g. the KernSmooth R package.
 	a = 0.920λ*n^(-1/7)
 	b = 0.912λ*n^(-1/9)
-	α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
+	# α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
+	α2Constant = 1.357*(SD_bounded2(a,X,tree)/TD(b,X))^(1/7)
 
-	tree = SumTree(X,10)
 
 	# Decide if we need to deal with bounds better.
 	# But note that execution is very fast for bad guesses for h.
