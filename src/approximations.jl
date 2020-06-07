@@ -27,27 +27,18 @@ function ϕ4bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 	ya,yb = ϕ4(a),ϕ4(b)
 
 	# line above (convex) or below (concave) ϕ4 in the interval
-	k1 = (yb-ya) / (b-a)
-	m1 = ya - k1*a
-
-	# # tangent line at midpoint, i.e.
-	# # line below (convex) or above (concave) ϕ4 in the interval
-	# mid = (a+b)/2
-	# k2 = ϕ5(mid)
-	# m2 = ϕ4(mid) - k2*mid
-
+	k = (yb-ya) / (b-a)
+	m = ya - k*a
+	y2 = npoints*(k*x+m)
 
 	# lower bound (convex) or upper bound (concave) using Jensen's inqueality.
 	y1 = ϕ4(x)*npoints
 
 
 	if ai&1 == 0 # concave
-		# k1,m1,k2,m2
-		npoints*(k1*x+m1), y1
+		y2, y1
 	else # convex
-		# k2,m2,k1,m1
-		y1, npoints*(k1*x+m1)
-		# npoints .* (kl*z+ml, ku*z+mu)
+		y1, y2
 	end
 end
 
