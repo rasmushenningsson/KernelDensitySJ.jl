@@ -4,7 +4,7 @@
 
 
 
-function ϕ4bounds(a,b,x,npoints)
+function ϕ4bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 	# TODO: Use a cache instead of computing affine approximation every time?
 	@assert 0<=a<=x<=b "$a, $x, $b"
 
@@ -12,7 +12,7 @@ function ϕ4bounds(a,b,x,npoints)
 
 	if b-a < 1e-9 # to avoid div by zero
 		y = ϕ4((a+b)/2)
-		return 0.,y,0.,y
+		return y,y
 	end
 
 	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3])
