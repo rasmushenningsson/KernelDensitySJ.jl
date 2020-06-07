@@ -162,7 +162,7 @@ function ϕ4sum(::Type{T}, k1, k2, α, X, leafSize) where T
 	if k1==k2
 		@inbounds for i in i1:i2
 			for j in i+1:i2 # upper triangular part
-				s += ϕ4((X[i]-X[j])/α)
+				s += ϕ4((X[j]-X[i])/α)
 			end
 		end
 	else
@@ -171,7 +171,7 @@ function ϕ4sum(::Type{T}, k1, k2, α, X, leafSize) where T
 
 		@inbounds for i in i1:i2
 			for j in j1:j2
-				s += ϕ4((X[i]-X[j])/α)
+				s += ϕ4((X[j]-X[i])/α)
 			end
 		end
 	end
