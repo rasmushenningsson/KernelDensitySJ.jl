@@ -313,19 +313,19 @@ function objectivesign2(h, X::AbstractArray{T}, tree::SumTree, α2Constant) wher
 end
 
 function SD_bounded2(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
-	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
+	# α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
 	lb,ub = sumapprox(Val{4}(), promote_type(Float64,T), α, X, tree; rtol=rtol)
-	s = (lb+ub) + n*1.1968268412042982 # 2*(lb+ub)/2 + n*ϕ4(0) - diagonal entries
-	s/(α^5*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and TD
+	s = (lb+ub) + n*ϕ4(0) # 2*(lb+ub)/2 + diagonal entries
+	s/α^5
 end
 
 function TD_bounded2(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
-	# (n(n-1))⁻¹b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
+	# b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
 	lb,ub = sumapprox(Val{6}(), promote_type(Float64,T), b, X, tree; rtol=rtol)
-	s = (lb+ub) + n*-5.984134206021491 # 2*(lb+ub)/2 + n*ϕ6(0) - diagonal entries
-	-s/(b^7*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and SD
+	s = (lb+ub) + n*ϕ6(0) # 2*(lb+ub)/2 + diagonal entries
+	-s/b^7
 end
 
 
