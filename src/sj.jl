@@ -1,21 +1,18 @@
-# initial tests for implementation of the "bw.sj" method, from 
+# Implementation of the "bw.sj" method, from
 # Sheather and Jones, "A Reliable Data-based Bandwidth Selection Method for Kernel Density Estimation"
 # Notation below follows roughly the notation in the paper.
-
 
 
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
 
 ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
-ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x))
+# ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x)) # For reference: used to find local extrema of ϕ4
 ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
-ϕ7(x) = (x2=x*x; x4=x2*x2; x6=x4*x2; x*(x6 - 21x4 + 105x2 - 105)*ϕ(x))
-
+# ϕ7(x) = (x2=x*x; x4=x2*x2; x6=x4*x2; x*(x6 - 21x4 + 105x2 - 105)*ϕ(x))                 # For reference: used to find local extrema of ϕ6
+# ϕ8(x) = (x2=x*x; x4=x2*x2; x6=x4*x2; x8=x4*x4; (x8 - 28x6 + 210x4 - 420x2 + 105)*ϕ(x)) # For reference: used to find intervals where ϕ6 is convex or concave.
 
 ϕ(::Val{4},x) = ϕ4(x)
-ϕ(::Val{5},x) = ϕ5(x)
 ϕ(::Val{6},x) = ϕ6(x)
-ϕ(::Val{7},x) = ϕ7(x)
 
 
 function ϕ4extrema(a,b)
@@ -34,12 +31,12 @@ function ϕ4extrema(a,b)
 		if b<=xExt[2]
 			ϕ4(a),ϕ4(b) # increasing function in this interval
 		else
-			min(ϕ4(a),ϕ4(b)),yExt[2] # the function covers one local extrema (maxima)
+			min(ϕ4(a),ϕ4(b)),yExt[2] # the function covers a local maximum
 		end
 	elseif b<=xExt[2]
-		yExt[1],max(ϕ4(a),ϕ4(b)) # the function covers one local extrema (minima)
+		yExt[1],max(ϕ4(a),ϕ4(b)) # the function covers the global minimum
 	else
-		yExt[1], max(ϕ4(a),yExt[2]) # the function covers two local extrema
+		yExt[1], max(ϕ4(a),yExt[2]) # the function covers the global minimum and a local maximum
 	end
 end
 
@@ -58,15 +55,15 @@ function ϕ6extrema(a,b)
 	elseif b<=xExt[2]
 		min(ϕ6(a),ϕ6(b)),yExt[1] # covers global maximum
 	elseif xExt[1]<=a && b<=xExt[3]
-		yExt[2],max(ϕ6(a),ϕ6(b)) # covers local minima
+		yExt[2],max(ϕ6(a),ϕ6(b)) # covers local minimum
 	elseif xExt[2]<=a
-		min(ϕ6(a),ϕ6(b)),yExt[3] # covers second local maxima
+		min(ϕ6(a),ϕ6(b)),yExt[3] # covers second local maximum
 	elseif xExt[1]<=a
-		yExt[2],max(ϕ6(a),yExt[3])  # covers the local minima and the second local maxima
+		yExt[2],max(ϕ6(a),yExt[3])  # covers the local minimum and the second local maximum
 	# elseif b<=xExt[3] # same as last case
-	# 	min(ϕ6(a),yExt[2]),yExt[1] # covers global maximum and local minima
+	# 	min(ϕ6(a),yExt[2]),yExt[1] # covers global maximum and local minimum
 	else
-		min(ϕ6(a),yExt[2]),yExt[1] # covers global maxima and local minima
+		min(ϕ6(a),yExt[2]),yExt[1] # covers global maximum and local minimum
 	end
 end
 
