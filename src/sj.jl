@@ -228,70 +228,79 @@ function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
 end
 
 
-# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
-# returns lower and upper bounds for s, terminating when pred(lowerbound,upperbound) returns true
-function ssumapprox(::Type{T},α,X,tree::SumTree,pred::Function)::Tuple{T,T} where T
-	heap = BinaryMaxHeap{Block2}()
-	lb,ub = bounds2(T,1,1,1,α,X,tree)
-	push!(heap,Block2(1,1,1,lb,ub))
+function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Type{T},α,X,tree::SumTree)::Tuple{T,T} where T
+	# lb > C && return 1
+	# ub < C && return -1
+	block = pop!(heap)
 
-	# it=1
-	while !pred(lb,ub)
-		# lb > C && return 1
-		# ub < C && return -1
-		isempty(heap) && break
-		block = pop!(heap)
+	# remove existing bounds
+	lb = -block.lb
+	ub = -block.ub
 
-		# mod(it,1000)==0 && @show it,length(heap),block.depth,block.k1,block.k2,block.ub-block.lb,ub-lb,(lb,ub)
-		# it+=1
+	if block.depth >= depth(tree) # Fallback to exact sum
+		s = ϕ4sum(T, block.k1, block.k2, α, X, tree.leafSize)
+		lb += s
+		ub += s
+	else # create child blocks
+		d = block.depth+1
+		k1 = 2block.k1-1 # first child in first direction
+		k2 = 2block.k2-1 # first child in second direction
+		nbrBlocks = length(tree.intervalSums[d])
 
-		# remove existing bounds
-		lb -= block.lb
-		ub -= block.ub
+		lb11,ub11 = bounds2(T, d, k1, k2, α, X, tree)
+		lb += lb11
+		ub += ub11
+		lb11!=ub11 && push!(heap, Block2(d, k1, k2, lb11, ub11))
 
-		if block.depth >= depth(tree) # Fallback to exact sum
-			s = ϕ4sum(T, block.k1, block.k2, α, X, tree.leafSize)
-			lb += s
-			ub += s
-		else # create child blocks
-			d = block.depth+1
-			k1 = 2block.k1-1 # first child in first direction
-			k2 = 2block.k2-1 # first child in second direction
-			nbrBlocks = length(tree.intervalSums[d])
+		if k1<k2<=nbrBlocks # only care about upper triangular part
+			lb21,ub21 = bounds2(T, d, k1+1, k2, α, X, tree)
+			lb += lb21
+			ub += ub21
+			lb21!=ub21 && push!(heap, Block2(d, k1+1, k2, lb21, ub21))
+		end
 
-			lb11,ub11 = bounds2(T, d, k1, k2, α, X, tree)
-			lb += lb11
-			ub += ub11
-			lb11!=ub11 && push!(heap, Block2(d, k1, k2, lb11, ub11))
+		if k2<nbrBlocks
+			lb12,ub12 = bounds2(T, d, k1, k2+1, α, X, tree)
+			lb += lb12
+			ub += ub12
+			lb12!=ub12 && push!(heap, Block2(d, k1, k2+1, lb12, ub12))
 
-			if k1<k2<=nbrBlocks # only care about upper triangular part
-				lb21,ub21 = bounds2(T, d, k1+1, k2, α, X, tree)
-				lb += lb21
-				ub += ub21
-				lb21!=ub21 && push!(heap, Block2(d, k1+1, k2, lb21, ub21))
-			end
-
-			if k2<nbrBlocks
-				lb12,ub12 = bounds2(T, d, k1, k2+1, α, X, tree)
-				lb += lb12
-				ub += ub12
-				lb12!=ub12 && push!(heap, Block2(d, k1, k2+1, lb12, ub12))
-
-				lb22,ub22 = bounds2(T, d, k1+1, k2+1, α, X, tree)
-				lb += lb22
-				ub += ub22
-				lb22!=ub22 && push!(heap, Block2(d, k1+1, k2+1, lb22, ub22))
-			end
+			lb22,ub22 = bounds2(T, d, k1+1, k2+1, α, X, tree)
+			lb += lb22
+			ub += ub22
+			lb22!=ub22 && push!(heap, Block2(d, k1+1, k2+1, lb22, ub22))
 		end
 	end
-
-	# @warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
-	# return 0
 	lb,ub
 end
 
-intervalcontains(C) = (lb,ub)->(lb<=C<=ub)
-intervalrtol(rtol) = (lb,ub)->isapprox(lb,ub;rtol=rtol)
+
+# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
+# returns lower and upper bounds for s, terminating when the tolerance is good enough
+function ssumapprox(::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where T
+	heap = BinaryMaxHeap{Block2}()
+	lb,ub = bounds2(T,1,1,1,α,X,tree)
+	push!(heap,Block2(1,1,1,lb,ub))
+	while !isempty(heap) && !isapprox(lb,ub;rtol=rtol)
+		lb,ub = (lb,ub) .+ ssumstep!(heap,T,α,X,tree)
+	end
+	lb,ub
+end
+
+# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
+# returns sign(s-C)
+function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
+	heap = BinaryMaxHeap{Block2}()
+	lb,ub = bounds2(T,1,1,1,α,X,tree)
+	push!(heap,Block2(1,1,1,lb,ub))
+	while !isempty(heap) && lb<=C<=ub
+		lb,ub = (lb,ub) .+ ssumstep!(heap,T,α,X,tree)
+	end
+	lb > C && return 1
+	ub < C && return -1
+	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
+	return 0
+end
 
 
 # Computes the sign of the objective function by gradually approximating using lower/upper bounds
@@ -303,18 +312,13 @@ function objectivesign2(h, X::AbstractArray{T}, tree::SumTree, α2Constant) wher
 	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
 	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
 
-	# ssign2(promote_type(Float64,T), α2, X, tree, C)
-	lb,ub = ssumapprox(promote_type(Float64,T), α2, X, tree, !intervalcontains(C))
-	lb > C && return 1
-	ub < C && return -1
-	@warn "Numerical issues for upper/lower bounds, ub=$ub, lb=$lb, C=$C."
-	return 0
+	ssign2(promote_type(Float64,T), α2, X, tree, C)
 end
 
 function SD_bounded2(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
-	lb,ub = ssumapprox(promote_type(Float64,T), α, X, tree, intervalrtol(rtol))
+	lb,ub = ssumapprox(promote_type(Float64,T), α, X, tree; rtol=rtol)
 	s = (lb+ub) + n*1.1968268412042982 # 2*(lb+ub)/2 + n*ϕ4(0) - diagonal entries
 	s/(α^5*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and TD
 end
