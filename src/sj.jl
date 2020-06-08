@@ -150,7 +150,7 @@ function objectivesign(h, X::AbstractArray{T}, tree::SumTree, α2Constant) where
 	ssign(promote_type(Float64,T), α2, X, tree, C)
 end
 
-function SD_bounded(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
+function SD(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
 	lb,ub = sumapprox(Val{4}(), promote_type(Float64,T), α, X, tree; rtol=rtol)
@@ -158,7 +158,7 @@ function SD_bounded(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	s/α^5
 end
 
-function TD_bounded(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
+function TD(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
 	lb,ub = sumapprox(Val{6}(), promote_type(Float64,T), b, X, tree; rtol=rtol)
@@ -167,24 +167,22 @@ function TD_bounded(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 end
 
 
-function _bwsj(X; rtol=0.1)
+function _bwsj(X; rtol=0.1, leafsize=10, lower=nothing, upper=nothing)
 	n = length(X)
-	tree = SumTree(X,10)
+	tree = SumTree(X,leafsize)
 
 	q25,q75 = quantile(X,(0.25,0.75))
 	λ = min(q75-q25, std(X)*1.349) # Givivng the same scale estimate as e.g. the KernSmooth R package.
 	a = 0.920λ*n^(-1/7)
 	b = 0.912λ*n^(-1/9)
-	# α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
-	α2Constant = 1.357*(SD_bounded(a,X,tree;rtol=0.5rtol)/TD_bounded(b,X,tree;rtol=0.5rtol))^(1/7)
-
+	α2Constant = 1.357*(SD(a,X,tree;rtol=0.5rtol)/TD(b,X,tree;rtol=0.5rtol))^(1/7)
 
 	# Decide if we need to deal with bounds better.
 	# But note that execution is very fast for bad guesses for h.
 
 	# The Bandwidth scales roughly with n^(-1/5)
-	lower = λ*n^(-1/5)*1e-9
-	upper = λ*n^(-1/5)*1e9
+	isnothing(lower) && (lower = λ*n^(-1/5)*1e-9)
+	isnothing(upper) && (upper = λ*n^(-1/5)*1e9)
 
 	find_zero(h->objectivesign(h,X,tree,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
