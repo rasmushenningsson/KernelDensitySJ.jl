@@ -7,7 +7,12 @@
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
 
 ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
+ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x))
 ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
+
+ϕ(::Val{4},x) = ϕ4(x)
+ϕ(::Val{5},x) = ϕ5(x)
+ϕ(::Val{6},x) = ϕ6(x)
 
 
 function ϕ4extrema(a,b)
@@ -35,29 +40,30 @@ function ϕ4extrema(a,b)
 	end
 end
 
+ϕextrema(::Val{4},a,b) = ϕ4extrema(a,b)
 
 
 #---------------------------------------------------------------------------------------------------
 
 function leafsums(::Type{T}, X, leafSize::Int) where T
-	N = length(X)
-	nbrRanges = div(N-1,leafSize)+1
+	n = length(X)
+	nbrRanges = div(n-1,leafSize)+1
 	intervalSums = Vector{T}(undef, nbrRanges)
 	incSums      = Vector{T}(undef, nbrRanges)
 	decSums      = Vector{T}(undef, nbrRanges)
 
 	for k in 1:nbrRanges
 		offs = (k-1)*leafSize
-		Nk = k<nbrRanges ? leafSize : mod1(N,leafSize)
+		nk = k<nbrRanges ? leafSize : mod1(n,leafSize)
 
 		s = zero(T)
 		sInc = zero(T)
 		sDec = zero(T)
-		for i in 1:Nk
+		for i in 1:nk
 			x = X[i+offs]
 			s    += x
 			sInc += (i-1)*x
-			sDec += (Nk-i)*x
+			sDec += (nk-i)*x
 		end
 		intervalSums[k] = s
 		incSums[k] = sInc
@@ -67,7 +73,7 @@ function leafsums(::Type{T}, X, leafSize::Int) where T
 end
 leafsums(X::AbstractArray{T}, leafSize::Int) where T = leafsums(promote_type(T,Float64),X,leafSize)
 
-function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vector{T},N::Int,intervalSize::Int) where T
+function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vector{T},n::Int,intervalSize::Int) where T
 	# needs more parameters, total length and current interval size
 
 	nbrRanges = length(intervalSums)
@@ -92,7 +98,7 @@ function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vecto
 	else
 		intervalSums2[k] = intervalSums[2k-1] + intervalSums[2k]
 		incSums2[k] = incSums[2k-1] + incSums[2k] + intervalSize*intervalSums[2k]
-		decSums2[k] = decSums[2k-1] + decSums[2k] + mod1(N,intervalSize)*intervalSums[2k-1]
+		decSums2[k] = decSums[2k-1] + decSums[2k] + mod1(n,intervalSize)*intervalSums[2k-1]
 	end
 
 	intervalSums2, incSums2, decSums2
@@ -137,26 +143,26 @@ end
 Base.isless(b1::Block2,b2::Block2) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
 
 
-function ϕ4sum(::Type{T}, k1, k2, α, X, leafSize) where T
-	N = length(X)
+function ϕsum(::Val{N}, ::Type{T}, k1, k2, α, X, leafSize) where {N,T}
+	n = length(X)
 
 	i1 = (k1-1)*leafSize+1
-	i2 = min(k1*leafSize, N)
+	i2 = min(k1*leafSize, n)
 
 	s = zero(T)
 	if k1==k2
 		@inbounds for i in i1:i2
 			for j in i+1:i2 # upper triangular part
-				s += ϕ4((X[j]-X[i])/α)
+				s += ϕ(Val{N}(), (X[j]-X[i])/α)
 			end
 		end
 	else
 		j1 = (k2-1)*leafSize+1
-		j2 = min(k2*leafSize, N)
+		j2 = min(k2*leafSize, n)
 
 		@inbounds for i in i1:i2
 			for j in j1:j2
-				s += ϕ4((X[j]-X[i])/α)
+				s += ϕ(Val{N}(), (X[j]-X[i])/α)
 			end
 		end
 	end
@@ -164,31 +170,31 @@ function ϕ4sum(::Type{T}, k1, k2, α, X, leafSize) where T
 end
 
 
-function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
-	N = length(X)
+function bounds2(::Val{N}, ::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where {N,T}
+	n = length(X)
 	intervalSize = tree.leafSize * 2^(length(tree.intervalSums)-d)
 
 	i1 = (k1-1)*intervalSize+1
-	i2 = min(k1*intervalSize, N)
+	i2 = min(k1*intervalSize, n)
 
 	if k1==k2 # block on the diagonal
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		x = (tree.incSums[d][k1] - tree.decSums[d][k1])/(npoints*α)
-		ϕ4bounds(0.0, (X[i2]-X[i1])/α, x, npoints)
+		ϕbounds(Val{N}(), 0.0, (X[i2]-X[i1])/α, x, npoints)
 	else
 		j1 = (k2-1)*intervalSize+1
-		j2 = min(k2*intervalSize, N)
-		Ni = intervalSize
-		Nj = (j2-j1+1)
-		npoints = Ni*Nj
-		meanI = tree.intervalSums[d][k1]/(Ni*α)
-		meanJ = tree.intervalSums[d][k2]/(Nj*α)
-		ϕ4bounds((X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI, npoints)
+		j2 = min(k2*intervalSize, n)
+		ni = intervalSize
+		nj = (j2-j1+1)
+		npoints = ni*nj
+		meanI = tree.intervalSums[d][k1]/(ni*α)
+		meanJ = tree.intervalSums[d][k2]/(nj*α)
+		ϕbounds(Val{N}(), (X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI, npoints)
 	end
 end
 
 
-function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Type{T},α,X,tree::SumTree)::Tuple{T,T} where T
+function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Val{N}, ::Type{T},α,X,tree::SumTree)::Tuple{T,T} where {N,T}
 	block = pop!(heap)
 
 	# remove existing bounds
@@ -196,7 +202,7 @@ function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Type{T},α,X,tree::SumTree)::T
 	ub = -block.ub
 
 	if block.depth >= depth(tree) # Fallback to exact sum
-		s = ϕ4sum(T, block.k1, block.k2, α, X, tree.leafSize)
+		s = ϕsum(Val{N}(), T, block.k1, block.k2, α, X, tree.leafSize)
 		lb += s
 		ub += s
 	else # create child blocks
@@ -205,25 +211,25 @@ function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Type{T},α,X,tree::SumTree)::T
 		k2 = 2block.k2-1 # first child in second direction
 		nbrBlocks = length(tree.intervalSums[d])
 
-		lb11,ub11 = bounds2(T, d, k1, k2, α, X, tree)
+		lb11,ub11 = bounds2(Val{N}(), T, d, k1, k2, α, X, tree)
 		lb += lb11
 		ub += ub11
 		lb11!=ub11 && push!(heap, Block2(d, k1, k2, lb11, ub11))
 
 		if k1<k2<=nbrBlocks # only care about upper triangular part
-			lb21,ub21 = bounds2(T, d, k1+1, k2, α, X, tree)
+			lb21,ub21 = bounds2(Val{N}(), T, d, k1+1, k2, α, X, tree)
 			lb += lb21
 			ub += ub21
 			lb21!=ub21 && push!(heap, Block2(d, k1+1, k2, lb21, ub21))
 		end
 
 		if k2<nbrBlocks
-			lb12,ub12 = bounds2(T, d, k1, k2+1, α, X, tree)
+			lb12,ub12 = bounds2(Val{N}(), T, d, k1, k2+1, α, X, tree)
 			lb += lb12
 			ub += ub12
 			lb12!=ub12 && push!(heap, Block2(d, k1, k2+1, lb12, ub12))
 
-			lb22,ub22 = bounds2(T, d, k1+1, k2+1, α, X, tree)
+			lb22,ub22 = bounds2(Val{N}(), T, d, k1+1, k2+1, α, X, tree)
 			lb += lb22
 			ub += ub22
 			lb22!=ub22 && push!(heap, Block2(d, k1+1, k2+1, lb22, ub22))
@@ -237,10 +243,10 @@ end
 # returns lower and upper bounds for s, terminating when the tolerance is good enough
 function ssumapprox(::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where T
 	heap = BinaryMaxHeap{Block2}()
-	lb,ub = bounds2(T,1,1,1,α,X,tree)
+	lb,ub = bounds2(Val{4}(),T,1,1,1,α,X,tree)
 	push!(heap,Block2(1,1,1,lb,ub))
 	while !isempty(heap) && !isapprox(lb,ub;rtol=rtol)
-		lb,ub = (lb,ub) .+ ssumstep!(heap,T,α,X,tree)
+		lb,ub = (lb,ub) .+ ssumstep!(heap,Val{4}(),T,α,X,tree)
 	end
 	lb,ub
 end
@@ -249,10 +255,10 @@ end
 # returns sign(s-C)
 function ssign2(::Type{T},α,X,tree::SumTree,C)::Int where T
 	heap = BinaryMaxHeap{Block2}()
-	lb,ub = bounds2(T,1,1,1,α,X,tree)
+	lb,ub = bounds2(Val{4}(),T,1,1,1,α,X,tree)
 	push!(heap,Block2(1,1,1,lb,ub))
 	while !isempty(heap) && lb<=C<=ub
-		lb,ub = (lb,ub) .+ ssumstep!(heap,T,α,X,tree)
+		lb,ub = (lb,ub) .+ ssumstep!(heap,Val{4}(),T,α,X,tree)
 	end
 	lb > C && return 1
 	ub < C && return -1

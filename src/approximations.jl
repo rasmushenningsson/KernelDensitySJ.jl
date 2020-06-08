@@ -1,8 +1,5 @@
 
 
-ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x))
-
-
 
 function ϕ4bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 	# TODO: Use a cache instead of computing affine approximation every time?
@@ -41,6 +38,8 @@ function ϕ4bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 		y1, y2
 	end
 end
+
+ϕbounds(::Val{4},a,b,x,npoints) = ϕ4bounds(a,b,x,npoints)
 
 
 
