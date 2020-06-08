@@ -52,7 +52,7 @@ function bounds(::Val{N}, ::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		npoints==0 && return zero(T),zero(T) # degenerate case
 		x = (tree.incSums[d][k1] - tree.decSums[d][k1])/(npoints*α)
-		ϕbounds(Val{N}(), 0.0, (X[i2]-X[i1])/α, x, npoints)
+		npoints.*ϕbounds(Val{N}(), 0.0, (X[i2]-X[i1])/α, x)
 	else
 		j1 = (k2-1)*intervalSize+1
 		j2 = min(k2*intervalSize, n)
@@ -61,7 +61,7 @@ function bounds(::Val{N}, ::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T
 		npoints = ni*nj
 		meanI = tree.intervalSums[d][k1]/(ni*α)
 		meanJ = tree.intervalSums[d][k2]/(nj*α)
-		ϕbounds(Val{N}(), (X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI, npoints)
+		npoints.*ϕbounds(Val{N}(), (X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI)
 	end
 end
 
