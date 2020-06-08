@@ -9,10 +9,13 @@
 ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
 ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x))
 ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
+ϕ7(x) = (x2=x*x; x4=x2*x2; x6=x4*x2; x*(x6 - 21x4 + 105x2 - 105)*ϕ(x))
+
 
 ϕ(::Val{4},x) = ϕ4(x)
 ϕ(::Val{5},x) = ϕ5(x)
 ϕ(::Val{6},x) = ϕ6(x)
+ϕ(::Val{7},x) = ϕ7(x)
 
 
 function ϕ4extrema(a,b)
@@ -40,7 +43,37 @@ function ϕ4extrema(a,b)
 	end
 end
 
+
+function ϕ6extrema(a,b)
+	# ϕ6 has global minimum at 0, global maximum at x≈1.15, two more local extrema and ϕ6(x)→0 as x→∞.
+	xExt = (1.154405394739968, 2.366759410734541, 3.750439717725742)
+	yExt = (4.2406124820663305, -1.4018233232694841, 0.15246889807941977)
+	# the implementation assumes 0<=a<=b
+
+
+	if xExt[3]<=a || (xExt[1]<=a && b<=xExt[2])
+		ϕ6(b),ϕ6(a) # decreasing function in these intervals
+	elseif b<=xExt[1] || (xExt[2]<=a && b<=xExt[3])
+		ϕ6(a),ϕ6(b) # increasing function in these intervals
+	elseif b<=xExt[2]
+		min(ϕ6(a),ϕ6(b)),yExt[1] # covers global maximum
+	elseif xExt[1]<=a && b<=xExt[3]
+		yExt[2],max(ϕ6(a),ϕ6(b)) # covers local minima
+	elseif xExt[2]<=a
+		min(ϕ6(a),ϕ6(b)),yExt[3] # covers second local maxima
+	elseif xExt[1]<=a
+		yExt[2],max(ϕ6(a),yExt[3])  # covers the local minima and the second local maxima
+	# elseif b<=xExt[3] # same as last case
+	# 	min(ϕ6(a),yExt[2]),yExt[1] # covers global maximum and local minima
+	else
+		min(ϕ6(a),yExt[2]),yExt[1] # covers global maxima and local minima
+	end
+end
+
+
+
 ϕextrema(::Val{4},a,b) = ϕ4extrema(a,b)
+ϕextrema(::Val{6},a,b) = ϕ6extrema(a,b)
 
 
 #---------------------------------------------------------------------------------------------------
