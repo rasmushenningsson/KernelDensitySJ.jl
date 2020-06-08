@@ -18,7 +18,7 @@ function ϕ4bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 
 	if b-a < 1e-9 # to avoid div by zero
 		y = ϕ4((a+b)/2)
-		return y,y
+		return npoints.*(y,y)
 	end
 
 	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3])
@@ -55,7 +55,7 @@ function ϕ6bounds(a,b,x,npoints)::Tuple{Float64,Float64}
 	breakpoints = (0.5390798113513751, 1.636519042435108, 2.8024858612875416, 4.144547186125894)
 	if b-a < 1e-9 # to avoid div by zero
 		y = ϕ6((a+b)/2)
-		return y,y
+		return npoints.*(y,y)
 	end
 
 	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3]) + (a>breakpoints[4])
