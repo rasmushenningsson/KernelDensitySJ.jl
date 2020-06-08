@@ -1,4 +1,4 @@
-# Implementation of the "bw.sj" method, from
+# Implementation of the "bwsj" method, from
 # Sheather and Jones, "A Reliable Data-based Bandwidth Selection Method for Kernel Density Estimation"
 # Notation below follows roughly the notation in the paper.
 
