@@ -51,7 +51,7 @@ function bounds(::Val{N}, ::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T
 	if k1==k2 # block on the diagonal
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		npoints==0 && return zero(T),zero(T) # degenerate case
-		x = (tree.incSums[d][k1] - tree.decSums[d][k1])/(npoints*α)
+		x = tree.diagonalSums[d][k1]/(npoints*α)
 		npoints.*ϕbounds(Val{N}(), 0.0, (X[i2]-X[i1])/α, x)
 	else
 		j1 = (k2-1)*intervalSize+1
