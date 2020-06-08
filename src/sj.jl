@@ -272,14 +272,14 @@ function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Val{N}, ::Type{T},α,X,tree::S
 end
 
 
-# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
+# Let s = ∑ᵢ∑ⱼϕ⁽ᴺ⁾(α⁻¹(Xᵢ-Xⱼ)).
 # returns lower and upper bounds for s, terminating when the tolerance is good enough
-function ssumapprox(::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where T
+function sumapprox(::Val{N},::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where {N,T}
 	heap = BinaryMaxHeap{Block2}()
-	lb,ub = bounds2(Val{4}(),T,1,1,1,α,X,tree)
+	lb,ub = bounds2(Val{N}(),T,1,1,1,α,X,tree)
 	push!(heap,Block2(1,1,1,lb,ub))
 	while !isempty(heap) && !isapprox(lb,ub;rtol=rtol)
-		lb,ub = (lb,ub) .+ ssumstep!(heap,Val{4}(),T,α,X,tree)
+		lb,ub = (lb,ub) .+ ssumstep!(heap,Val{N}(),T,α,X,tree)
 	end
 	lb,ub
 end
@@ -315,9 +315,17 @@ end
 function SD_bounded2(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
-	lb,ub = ssumapprox(promote_type(Float64,T), α, X, tree; rtol=rtol)
+	lb,ub = sumapprox(Val{4}(), promote_type(Float64,T), α, X, tree; rtol=rtol)
 	s = (lb+ub) + n*1.1968268412042982 # 2*(lb+ub)/2 + n*ϕ4(0) - diagonal entries
 	s/(α^5*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and TD
+end
+
+function TD_bounded2(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
+	# (n(n-1))⁻¹b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
+	n = length(X)
+	lb,ub = sumapprox(Val{6}(), promote_type(Float64,T), b, X, tree; rtol=rtol)
+	s = (lb+ub) + n*-5.984134206021491 # 2*(lb+ub)/2 + n*ϕ6(0) - diagonal entries
+	-s/(b^7*n*(n-1)) # TODO: get rid of n*(n-1) factor from this and SD
 end
 
 
@@ -330,7 +338,7 @@ function _bwsj_bounded2(X; rtol=0.1)
 	a = 0.920λ*n^(-1/7)
 	b = 0.912λ*n^(-1/9)
 	# α2Constant = 1.357*(SD(a,X)/TD(b,X))^(1/7)
-	α2Constant = 1.357*(SD_bounded2(a,X,tree)/TD(b,X))^(1/7)
+	α2Constant = 1.357*(SD_bounded2(a,X,tree;rtol=0.5rtol)/TD_bounded2(b,X,tree;rtol=0.5rtol))^(1/7)
 
 
 	# Decide if we need to deal with bounds better.
@@ -613,6 +621,7 @@ function _bwsj(X; rtol=0.1)
 end
 
 
-bwsj(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
-# bwsj(X; kwargs...) = _bwsj_bounded2(issorted(X) ? X : sort(X); kwargs...)
+# bwsj(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
+bwsj_reference(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
+bwsj(X; kwargs...) = _bwsj_bounded2(issorted(X) ? X : sort(X); kwargs...)
 
