@@ -5,7 +5,7 @@
 [![Coverage](https://codecov.io/gh/rasmushenningsson/KernelDensitySJ.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rasmushenningsson/KernelDensitySJ.jl)
 [![Coverage](https://coveralls.io/repos/github/rasmushenningsson/KernelDensitySJ.jl/badge.svg?branch=master)](https://coveralls.io/github/rasmushenningsson/KernelDensitySJ.jl?branch=master)
 
-Bandwidth selection using Sheather and Jones algorithm (sometimes known as width.SJ or bw.SJ). The specific method is sometimes referred to as "solve-the-equation".
+Bandwidth selection using Sheather and Jones algorithm also known as width.SJ or bw.SJ. The specific method is sometimes referred to as "solve-the-equation".
 Only Gaussian kernels are supported.
 
 The aim of this package is to provide implementation of the Sheather and Jones algorithm for bandwidth selection that is:
