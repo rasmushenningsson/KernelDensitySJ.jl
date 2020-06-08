@@ -7,7 +7,8 @@ using Roots
 export bwsj
 
 include("sums.jl")
-include("approximations.jl")
+include("phi.jl")
+include("reference.jl")
 include("sj.jl")
 
 end
