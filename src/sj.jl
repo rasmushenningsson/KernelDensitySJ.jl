@@ -110,7 +110,7 @@ function ssumstep!(heap::BinaryMaxHeap{Block}, ::Val{N}, ::Type{T},α,X,tree::Su
 end
 
 
-# Let s = ∑ᵢ∑ⱼϕ⁽ᴺ⁾(α⁻¹(Xᵢ-Xⱼ)).
+# Let s = ∑ᵢ∑ⱼϕ⁽ᴺ⁾(α⁻¹(Xᵢ-Xⱼ)), where the sum is taken over i<j.
 # returns lower and upper bounds for s, terminating when the tolerance is good enough
 function sumapprox(::Val{N},::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where {N,T}
 	heap = BinaryMaxHeap{Block}()
@@ -122,7 +122,7 @@ function sumapprox(::Val{N},::Type{T},α,X,tree::SumTree;rtol)::Tuple{T,T} where
 	lb,ub
 end
 
-# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)).
+# Let s = ∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ)), where the sum is taken over i<j.
 # returns sign(s-C)
 function ssign(::Type{T},α,X,tree::SumTree,C)::Int where T
 	heap = BinaryMaxHeap{Block}()
@@ -144,7 +144,7 @@ function objectivesign(h, X::AbstractArray{T}, tree::SumTree, α2Constant) where
 	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
 
 	C = (n-1)*α2Constant^5*h^(-10/7)/(2*√π)
-	C -= n*1.1968268412042982 # n*ϕ4(0) - get rid of the diagonal entries
+	C -= n*ϕ4(0) # get rid of the diagonal entries
 	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
 
 	ssign(promote_type(Float64,T), α2, X, tree, C)
@@ -152,22 +152,33 @@ end
 
 function SD(α, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
-	n = length(X)
 	lb,ub = sumapprox(Val{4}(), promote_type(Float64,T), α, X, tree; rtol=rtol)
-	s = (lb+ub) + n*ϕ4(0) # 2*(lb+ub)/2 + diagonal entries
+	s = (lb+ub) + length(X)*ϕ4(0) # 2*(lb+ub)/2 + diagonal entries
 	s/α^5
 end
 
 function TD(b, X::AbstractArray{T}, tree::SumTree; rtol=0.05) where T
 	# b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
-	n = length(X)
 	lb,ub = sumapprox(Val{6}(), promote_type(Float64,T), b, X, tree; rtol=rtol)
-	s = (lb+ub) + n*ϕ6(0) # 2*(lb+ub)/2 + diagonal entries
+	s = (lb+ub) + length(X)*ϕ6(0) # 2*(lb+ub)/2 + diagonal entries
 	-s/b^7
 end
 
+"""
+	bwsj(X; rtol=0.1, leafsize=10, lower=λ*n^(-1/5)*1e-9, upper=λ*n^(-1/5)*1e9)
 
-function _bwsj(X; rtol=0.1, leafsize=10, lower=nothing, upper=nothing)
+Bandwidth selection for kernel density estimation using Gaussian kernels.
+Based on the paper Sheather, S. J., & Jones, M. C. (1991). A reliable data‐based bandwidth selection method for kernel density estimation. Journal of the Royal Statistical Society: Series B (Methodological), 53(3), 683-690.
+
+Solves the equation [ R(K) / (nσ⁴ₖS_D(α₂(h))) ]^(1/5) - h = 0 by root finding, bounding the objective such that each iteration can be terminated when the sign of the objective is known.
+
+* `rtol` - the relative tolerance for the bandwidth.
+* `leafsize` - Below this size, exact computations are used instead of bounds. Does not impact the accuracy of the result, only the execution time.
+* `lower` - Bandwidth lower bound. There is usally no need to change the bounds.
+* `upper` - Bandwidth upper bound.
+"""
+function bwsj(X; rtol=0.1, leafsize=10, lower=nothing, upper=nothing)
+	issorted(X) || (X=sort(X))
 	n = length(X)
 	tree = SumTree(X,leafsize)
 
@@ -186,10 +197,4 @@ function _bwsj(X; rtol=0.1, leafsize=10, lower=nothing, upper=nothing)
 
 	find_zero(h->objectivesign(h,X,tree,α2Constant), (lower,upper), Bisection(), xrtol=rtol)
 end
-
-
-bwsj(X; kwargs...) = _bwsj(issorted(X) ? X : sort(X); kwargs...)
-
-
-
 
