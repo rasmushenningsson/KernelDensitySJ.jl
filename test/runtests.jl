@@ -3,6 +3,8 @@ using Distributions
 using StableRNGs
 using Test
 
+import KernelDensitySJ: ϕ4,ϕ6,ϕ4bounds,ϕ6bounds
+
 # Ground truth was generated using the bw.SJ() R function, with nb=10000 and tol=1e-3 unless further specified.
 # Some differences are expected because of how the double sums are approximated.
 
@@ -81,4 +83,21 @@ end
 
 	Y3 = 1e9.*sign.(randn(rng,10)) .+ randn(rng,10)
 	@test bwsj(vcat(X,Y3))≈0.12247926574875453 rtol=0.1
+end
+
+
+@testset "ϕbounds" begin
+	for stepsize in (0.1, 0.5, 1.0, 2.5, 5.0)
+		a = 0:stepsize:5
+		b = a.+stepsize
+		x = range(0,stop=stepsize,length=11)[2:end-1]'
+
+		B = ϕ4bounds.(a,b,a.+x)
+		lb,ub = first.(B),last.(B)
+		@test all(lb.<=ϕ4.(a.+x).<=ub)
+
+		B = ϕ6bounds.(a,b,a.+x)
+		lb,ub = first.(B),last.(B)
+		@test all(lb.<=ϕ6.(a.+x).<=ub)
+	end
 end
