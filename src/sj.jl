@@ -6,9 +6,6 @@
 
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
 
-# ϕ4(x) = (x^4 - 6x^2 + 3) * ϕ(x) # slow
-# ϕ6(x) = (x^6 - 15x^4 + 45x^2 - 15) * ϕ(x) # slow
-
 ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
 ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
 
@@ -42,17 +39,6 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
-# function leafsums(::Type{T}, X, leafSize::Int) where T
-# 	N = length(X)
-# 	nbrRanges = div(N-1,leafSize)+1
-# 	sums = Vector{T}(undef, nbrRanges)
-# 	for k in 1:nbrRanges
-# 		sums[k] = sum(view(X,(k-1)*leafSize+1:min(k*leafSize,N)))
-# 	end
-# 	sums
-# end
-# leafsums(X::AbstractArray{T}, leafSize::Int) where T = leafsums(promote_type(T,Float64),X,leafSize)
-
 function leafsums(::Type{T}, X, leafSize::Int) where T
 	N = length(X)
 	nbrRanges = div(N-1,leafSize)+1
@@ -83,7 +69,6 @@ leafsums(X::AbstractArray{T}, leafSize::Int) where T = leafsums(promote_type(T,F
 
 function aggregatesums(intervalSums::Vector{T},incSums::Vector{T},decSums::Vector{T},N::Int,intervalSize::Int) where T
 	# needs more parameters, total length and current interval size
-
 
 	nbrRanges = length(intervalSums)
 	@assert nbrRanges==length(incSums)==length(decSums)
@@ -187,50 +172,23 @@ function bounds2(::Type{T}, d, k1, k2, α, X, tree::SumTree)::Tuple{T,T} where T
 	i2 = min(k1*intervalSize, N)
 
 	if k1==k2 # block on the diagonal
-		# New
-		# npoints = div((i2-i1+1)*(i2-i1),2)
-		# kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
-		# z = (tree.incSums[d][k1] - tree.decSums[d][k1])/α
-		# (kl*z + npoints*ml, ku*z + npoints*mu)
-
-		# New V2
 		npoints = div((i2-i1+1)*(i2-i1),2)
 		x = (tree.incSums[d][k1] - tree.decSums[d][k1])/(npoints*α)
 		ϕ4bounds(0.0, (X[i2]-X[i1])/α, x, npoints)
-
-		# # intermediate
-		# npoints = div((i2-i1+1)*(i2-i1),2)
-		# kl,ml,ku,mu = ϕ4affinebounds(0,(X[i2]-X[i1])/α)
-		# z = sum(i->(2i-i2-i1)*X[i], i1:i2) / α # TODO: cache for efficiency
-		# (kl*z + npoints*ml, ku*z + npoints*mu)
-
-		# # old
-		# npoints = div((i2-i1+1)*(i2-i1),2)
-		# npoints.*ϕ4extrema(0.0, (X[i2]-X[i1])/α) # TODO: improve this.
 	else
 		j1 = (k2-1)*intervalSize+1
 		j2 = min(k2*intervalSize, N)
 		Ni = intervalSize
 		Nj = (j2-j1+1)
 		npoints = Ni*Nj
-
 		meanI = tree.intervalSums[d][k1]/(Ni*α)
 		meanJ = tree.intervalSums[d][k2]/(Nj*α)
-
-		# New
-		# kl,ml,ku,mu = ϕ4affinebounds((X[j1]-X[i2])/α,(X[j2]-X[i1])/α)
-		# z = meanJ-meanI
-		# npoints .* (kl*z+ml, ku*z+mu)
-
-		# New v2
 		ϕ4bounds((X[j1]-X[i2])/α, (X[j2]-X[i1])/α, meanJ-meanI, npoints)
 	end
 end
 
 
 function ssumstep!(heap::BinaryMaxHeap{Block2}, ::Type{T},α,X,tree::SumTree)::Tuple{T,T} where T
-	# lb > C && return 1
-	# ub < C && return -1
 	block = pop!(heap)
 
 	# remove existing bounds
