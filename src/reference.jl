@@ -36,8 +36,6 @@ function objective_reference(h, X, α2Constant)
 	# σ⁴ₖ = 1
 	n = length(X)
 	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
-	# denom = (n*2*√π) * SD(α2,X)
-	# denom^(-1/5) - h
 	1/(2*√(π)*n*h^5) - SD_reference(α2,X)
 end
 

@@ -96,10 +96,7 @@ end
 
 
 function ϕ4extrema(a,b)
-	# (x-√(5+√10))(x+√(5+√10))(x-√(5-√10))(x+√(5-√10))x
-	# -√(5+√BigFloat(10)), √(5-√BigFloat(10)), 0, √(5-√BigFloat(10)), √(5+√BigFloat(10))
-	# xExt = (-2.8569700138728056, 1.355626179974266, 0.0, 1.355626179974266, 2.8569700138728056)
-	# yExt = (0.13912184973492348, -0.7399861849949221, 1.1968268412042982, -0.7399861849949221, 0.13912184973492348)
+	# x at extrema: -√(5+√10), √(5-√10), 0, √(5-√10), √(5+√10)
 	# we only need to consider x>0 since the function is even
 	xExt = (1.355626179974266, 2.8569700138728056)
 	yExt = (-0.7399861849949221, 0.13912184973492348)
@@ -122,11 +119,11 @@ end
 
 function ϕ6extrema(a,b)
 	# ϕ6 has global minimum at 0, global maximum at x≈1.15, two more local extrema and ϕ6(x)→0 as x→∞.
+	# we only need to consider x>0 since the function is even
 	xExt = (1.154405394739968, 2.366759410734541, 3.750439717725742)
 	yExt = (4.2406124820663305, -1.4018233232694841, 0.15246889807941977)
+
 	# the implementation assumes 0<=a<=b
-
-
 	if xExt[3]<=a || (xExt[1]<=a && b<=xExt[2])
 		ϕ6(b),ϕ6(a) # decreasing function in these intervals
 	elseif b<=xExt[1] || (xExt[2]<=a && b<=xExt[3])
