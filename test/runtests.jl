@@ -8,16 +8,27 @@ using Test
 
 @testset "range" begin
 	# R: nb=10000000, tol=1e-6
-	@test bwsj(range(0,stop=1,length= 96); rtol=1e-3)≈0.1109613 rtol=1e-2
-	@test bwsj(range(0,stop=1,length= 97); rtol=1e-3)≈0.1105281 rtol=1e-2
-	@test bwsj(range(0,stop=1,length= 98); rtol=1e-3)≈0.1101011 rtol=1e-2
-	@test bwsj(range(0,stop=1,length= 99); rtol=1e-3)≈0.1096801 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=100); rtol=1e-3)≈0.1092651 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=101); rtol=1e-3)≈0.1088558 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=102); rtol=1e-3)≈0.1084521 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=103); rtol=1e-3)≈0.1080540 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=104); rtol=1e-3)≈0.1076612 rtol=1e-2
-	@test bwsj(range(0,stop=1,length=105); rtol=1e-3)≈0.1072737 rtol=1e-2
+	@test bwsj(range(0,stop=1,length= 96); rtol=1e-1)≈0.1109613 rtol=1e-1
+	@test bwsj(range(0,stop=1,length= 97); rtol=1e-1)≈0.1105281 rtol=1e-1
+	@test bwsj(range(0,stop=1,length= 98); rtol=1e-1)≈0.1101011 rtol=1e-1
+	@test bwsj(range(0,stop=1,length= 99); rtol=1e-1)≈0.1096801 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=100); rtol=1e-1)≈0.1092651 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=101); rtol=1e-1)≈0.1088558 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=102); rtol=1e-1)≈0.1084521 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=103); rtol=1e-1)≈0.1080540 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=104); rtol=1e-1)≈0.1076612 rtol=1e-1
+	@test bwsj(range(0,stop=1,length=105); rtol=1e-1)≈0.1072737 rtol=1e-1
+
+	@test bwsj(range(0,stop=1,length= 96); rtol=1e-3)≈0.1109613 rtol=1e-3
+	@test bwsj(range(0,stop=1,length= 97); rtol=1e-3)≈0.1105281 rtol=1e-3
+	@test bwsj(range(0,stop=1,length= 98); rtol=1e-3)≈0.1101011 rtol=1e-3
+	@test bwsj(range(0,stop=1,length= 99); rtol=1e-3)≈0.1096801 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=100); rtol=1e-3)≈0.1092651 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=101); rtol=1e-3)≈0.1088558 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=102); rtol=1e-3)≈0.1084521 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=103); rtol=1e-3)≈0.1080540 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=104); rtol=1e-3)≈0.1076612 rtol=1e-3
+	@test bwsj(range(0,stop=1,length=105); rtol=1e-3)≈0.1072737 rtol=1e-3
 end
 
 @testset "scale" begin
