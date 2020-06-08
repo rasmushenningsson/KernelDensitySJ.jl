@@ -56,13 +56,13 @@ function _bwsj_reference(X; rtol=0.1)
 	lower = 0.1*λ
 	for i=1:11
 		i==11 && error("Failed to find lower bound")
-		objective(lower,X,α2Constant)>0 && break
+		objective_reference(lower,X,α2Constant)>0 && break
 		lower/=10
 	end
 	upper = 1*λ
 	for i=1:11
 		i==11 && error("Failed to find upper bound")
-		objective(upper,X,α2Constant)<0 && break
+		objective_reference(upper,X,α2Constant)<0 && break
 		upper*=10
 	end
 
