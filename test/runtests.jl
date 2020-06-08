@@ -3,7 +3,7 @@ using Distributions
 using StableRNGs
 using Test
 
-import KernelDensitySJ: ϕ4,ϕ6,ϕ4bounds,ϕ6bounds
+import KernelDensitySJ: ϕ4,ϕ6,ϕ4bounds,ϕ6bounds,bwsj_reference
 
 # Ground truth was generated using the bw.SJ() R function, with nb=10000 and tol=1e-3 unless further specified.
 # Some differences are expected because of how the double sums are approximated.
@@ -33,6 +33,10 @@ import KernelDensitySJ: ϕ4,ϕ6,ϕ4bounds,ϕ6bounds
 	@test bwsj(range(0,stop=1,length=105); rtol=1e-3)≈0.1072737 rtol=1e-3
 end
 
+@testset "reference" begin
+	@test bwsj_reference(range(0,stop=1,length=100); rtol=1e-1)≈0.1092651 rtol=1e-1
+end
+
 @testset "scale" begin
 	@test bwsj(range(0,stop=1e3,  length=101))≈0.1088518*1e3   rtol=0.1
 	@test bwsj(range(0,stop=1e-3, length=101))≈0.1088518*1e-3  rtol=0.1
@@ -57,17 +61,18 @@ end
 
 @testset "quantile" begin
 	N = 100
-	α = 2.0.^(-4:3)
 	X = quantile.(Normal(), range(1/2N,stop=1-1/2N,length=N))
 
-	@test bwsj(sign.(X).*abs.(X).^α[1])≈0.05301544  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[2])≈0.07877113  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[3])≈0.1279672   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[4])≈0.2092015   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[5])≈0.4747508   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[6])≈0.1394881   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[7])≈0.03132362  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^α[8])≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-4))≈0.05301544  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-3))≈0.07877113  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-2))≈0.1279672   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-1))≈0.2092015   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^0 ))≈0.4747508   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^1 ))≈0.1394881   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^2 ))≈0.03132362  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^3 ))≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
+
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^6))≈1.1579829602522003e-12 rtol=0.1 # NB: ground truth generated with bwsj_reference(; rtol=1e-24)
 end
 
 @testset "outliers" begin
@@ -84,7 +89,6 @@ end
 	Y3 = 1e9.*sign.(randn(rng,10)) .+ randn(rng,10)
 	@test bwsj(vcat(X,Y3))≈0.12247926574875453 rtol=0.1
 end
-
 
 @testset "ϕbounds" begin
 	for stepsize in (0.1, 0.5, 1.0, 2.5, 5.0)
