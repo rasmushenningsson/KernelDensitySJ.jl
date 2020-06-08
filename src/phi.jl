@@ -35,10 +35,9 @@ function ϕ4bounds(a,b,x)::Tuple{Float64,Float64}
 
 	ya,yb = ϕ4(a),ϕ4(b)
 
-	# line above (convex) or below (concave) ϕ4 in the interval
-	k = (yb-ya) / (b-a)
-	m = ya - k*a
-	y2 = (k*x+m)
+	# bound by line above (convex) or below (concave) ϕ4 in the interval
+	y2 = (yb-ya)*((x-a)/(b-a)) + ya
+
 
 	# lower bound (convex) or upper bound (concave) using Jensen's inqueality.
 	y1 = ϕ4(x)
@@ -76,10 +75,8 @@ function ϕ6bounds(a,b,x)::Tuple{Float64,Float64}
 
 	ya,yb = ϕ6(a),ϕ6(b)
 
-	# line above (convex) or below (concave) ϕ6 in the interval
-	k = (yb-ya) / (b-a)
-	m = ya - k*a
-	y2 = k*x+m
+	# bound by line above (convex) or below (concave) ϕ6 in the interval
+	y2 = (yb-ya)*((x-a)/(b-a)) + ya
 
 	# lower bound (convex) or upper bound (concave) using Jensen's inqueality.
 	y1 = ϕ6(x)
