@@ -97,6 +97,12 @@ end
 	@test bwsj(vcat(X,Y3))≈0.12247926574875453 rtol=0.1
 end
 
+@testset "repeats" begin
+    X = vcat(zeros(10),ones(10),2*ones(10),4*ones(10))
+    @test bwsj(X;leafsize=10)≈0.1246847 rtol=1
+    @test bwsj(X;leafsize=5 )≈0.1246847 rtol=1
+end
+
 @testset "ϕbounds" begin
 	for stepsize in (0.1, 0.5, 1.0, 2.5, 5.0)
 		a = 0:stepsize:5

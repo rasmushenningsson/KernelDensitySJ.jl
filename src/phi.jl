@@ -17,13 +17,13 @@ Let `x` be the mean of a set of points {xᵢ} such that xᵢ∈[`a`,`b`] ∀i.
 ϕ4bounds computes lower and upper bounds for ∑ᵢϕ⁽⁴⁾(xᵢ)/n, where n is the number of points.
 """
 function ϕ4bounds(a,b,x)::Tuple{Float64,Float64}
-	@assert 0<=a<=x<=b "$a, $x, $b"
-
 	breakpoints = (0.6167065901925941, 1.8891758777537109, 3.3242574335521193)
 	if b-a < 1e-9 # to avoid div by zero
+		(abs(x-a)<1e-9 && abs(b-x)<1e-9) || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
 		y = ϕ4((a+b)/2)
 		return y,y
 	end
+	0<=a<=x<=b || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
 
 	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3])
 	bi = (b>breakpoints[1]) + (b>breakpoints[2]) + (b>breakpoints[3])
@@ -57,13 +57,13 @@ Let `x` be the mean of a set of points {xᵢ} such that xᵢ∈[`a`,`b`] ∀i.
 ϕ6bounds computes lower and upper bounds for ∑ᵢϕ⁽⁶⁾(xᵢ)/n.
 """
 function ϕ6bounds(a,b,x)::Tuple{Float64,Float64}
-	@assert 0<=a<=x<=b "$a, $x, $b"
-
 	breakpoints = (0.5390798113513751, 1.636519042435108, 2.8024858612875416, 4.144547186125894)
 	if b-a < 1e-9 # to avoid div by zero
+		(abs(x-a)<1e-9 && abs(b-x)<1e-9) || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
 		y = ϕ6((a+b)/2)
 		return y,y
 	end
+	0<=a<=x<=b || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
 
 	ai = (a>breakpoints[1]) + (a>breakpoints[2]) + (a>breakpoints[3]) + (a>breakpoints[4])
 	bi = (b>breakpoints[1]) + (b>breakpoints[2]) + (b>breakpoints[3]) + (b>breakpoints[4])
