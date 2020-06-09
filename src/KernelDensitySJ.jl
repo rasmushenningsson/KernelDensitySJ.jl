@@ -9,6 +9,6 @@ export bwsj
 include("sums.jl")
 include("phi.jl")
 include("reference.jl")
-include("sj.jl")
+include("bwsj.jl")
 
 end
