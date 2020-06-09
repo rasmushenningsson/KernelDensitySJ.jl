@@ -180,6 +180,7 @@ Solves the equation [ R(K) / (nσ⁴ₖS_D(α₂(h))) ]^(1/5) - h = 0 by root fi
 """
 function bwsj(X; rtol=0.1, leafsize=10, lower=nothing, upper=nothing)
 	issorted(X) || (X=sort(X))
+	(length(X)<=1 || X[1]==X[end]) && return NaN # degenerate cases
 	n = length(X)
 	tree = SumTree(X,leafsize)
 

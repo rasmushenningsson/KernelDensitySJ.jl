@@ -8,6 +8,13 @@ import KernelDensitySJ: ϕ4,ϕ6,ϕ4bounds,ϕ6bounds,bwsj_reference
 # Ground truth was generated using the bw.SJ() R function, with nb=10000 and tol=1e-3 unless further specified.
 # Some differences are expected because of how the double sums are approximated.
 
+@testset "fewpoints" begin
+	@test isnan(bwsj([0.0]))
+	@test isnan(bwsj([1.0]))
+	@test isnan(bwsj(ones(100)))
+	@test bwsj([1.0,2.0])≈0.1163591 rtol=0.1
+end
+
 @testset "range" begin
 	# R: nb=10000000, tol=1e-6
 	@test bwsj(range(0,stop=1,length= 96); rtol=1e-1)≈0.1109613 rtol=1e-1
