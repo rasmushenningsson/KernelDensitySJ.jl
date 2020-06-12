@@ -16,7 +16,7 @@ The aim of this package is to provide implementation of the Sheather and Jones a
 ## Installation
 Start the Julia REPL, press ']' to enter package mode and type
 ```
-add https://github.com/rasmushenningsson/KernelDensitySJ.jl.git
+add KernelDensitySJ
 ```
 
 ## Usage Example
