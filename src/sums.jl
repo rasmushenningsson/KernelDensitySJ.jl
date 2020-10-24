@@ -9,7 +9,7 @@ function binary_reduce(op::F, ::Type{T}, x, final) where {F,T}
 end
 binary_reduce(op, x::AbstractVector{T}, final) where T = binary_reduce(op, T, x, final)
 
-diagonalsum(x) = (N=length(x); sum(z->z[1]*z[2], zip(x,range(-N+1;length=N,step=2))))
+diagonalsum(x) = (N=length(x); sum(z->z[1]*z[2], zip(x,-N+1:2:N-1)))
 
 # Function barrier to help compiler
 diagonal_reduction(::Type{T},N,diagonalSums,intervalSums,intervalSize) where T =
