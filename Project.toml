@@ -1,7 +1,7 @@
 name = "KernelDensitySJ"
 uuid = "49dc5b4e-6806-4504-b2cc-a81764e7a38b"
 authors = ["Rasmus Henningsson <rasmus.henningsson@gmail.com>", "Lund University"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
