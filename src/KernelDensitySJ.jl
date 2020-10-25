@@ -4,7 +4,7 @@ using Statistics
 using DataStructures
 using Roots
 
-export bwsj
+export bwsj, gaussiansmoothing
 
 include("sums.jl")
 include("phi.jl")

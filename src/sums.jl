@@ -30,7 +30,11 @@ end
 
 nbrlevels(N,leafSize) = Int(log2(nextpow(2, div(N+leafSize-1,leafSize))))+1
 
-struct SumTree{T}
+abstract type Tree end
+depth(t::Tree) = length(t.intervalSums)
+
+
+struct SumTree{T} <: Tree
 	leafSize::Int
 	intervalSums::Vector{Vector{T}}
 	diagonalSums::Vector{Vector{T}}
@@ -47,4 +51,15 @@ function SumTree(X::AbstractVector{T}, leafSize) where T
 
 	SumTree(leafSize, reverse!(allIntervalSums), reverse!(allDiagonalSums))
 end
-depth(t::SumTree) = length(t.intervalSums)
+
+
+struct WeightTree{T} <: Tree
+	leafSize::Int
+	intervalSums::Vector{Vector{T}}
+end
+function WeightTree(X::AbstractVector, leafSize) where T
+	N = length(X)
+	intervalSums = map(sum, Iterators.partition(X,leafSize))
+	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums, nbrlevels(N,leafSize))
+	WeightTree(leafSize,reverse!(allIntervalSums))
+end
