@@ -69,3 +69,17 @@ end
 
 
 bwsj_reference(X; kwargs...) = _bwsj_reference(issorted(X) ? X : sort(X); kwargs...)
+
+
+
+function gaussiansmoothing_reference(x::AbstractVector{<:T1}, y::AbstractVector{<:S}, bandwidth::T2, xeval::AbstractVector{<:T3}) where {T1<:Real,S<:Real,T2<:Real,T3<:Real}
+	@assert length(x)==length(y)
+	c = 1/(2*bandwidth^2)
+	smoothed = similar(xeval, promote_type(S,T1,T2,T3))
+	w = similar(x, promote_type(T1,T2,T3))
+	for i=1:length(xeval)
+		w .= exp.(-c*(x.-xeval[i]).^2)
+		smoothed[i] = y'w / sum(w)
+	end
+	smoothed
+end

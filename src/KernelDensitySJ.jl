@@ -8,7 +8,8 @@ export bwsj
 
 include("sums.jl")
 include("phi.jl")
-include("reference.jl")
 include("bwsj.jl")
+include("smooth.jl")
+include("reference.jl")
 
 end
