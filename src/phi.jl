@@ -1,5 +1,7 @@
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
 
+# ϕ2(x) = (x*x-1)*ϕ(x) # For reference: used to find intervals where ϕ is convex or concave.
+
 ϕ4(x) = (x2=x*x; (x2*x2 - 6x2 + 3) * ϕ(x))
 # ϕ5(x) = (x2=x*x; x4=x2*x2; -x*(x4 - 10x2 + 15) * ϕ(x)) # For reference: used to find local extrema of ϕ4
 ϕ6(x) = (x2=x*x; x4=x2*x2; (x4*x2 - 15x4 + 45x2 - 15) * ϕ(x))
@@ -8,6 +10,41 @@
 
 ϕ(::Val{4},x) = ϕ4(x)
 ϕ(::Val{6},x) = ϕ6(x)
+
+
+
+"""
+	ϕbounds(a,b,x)
+
+Let `x` be the mean of a set of points {xᵢ} such that xᵢ∈[`a`,`b`] ∀i.
+ϕbounds computes lower and upper bounds for ∑ᵢϕ(xᵢ)/n, where n is the number of points.
+"""
+function ϕbounds(a,b,x)::Tuple{Float64,Float64}
+	if b-a < 1e-9 # to avoid div by zero
+		(abs(x-a)<1e-9 && abs(b-x)<1e-9) || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
+		y = ϕ((a+b)/2)
+		return y,y
+	end
+	0<=a<=x<=b || throw(ArgumentError("x=$x must be in interval [a=$a, b=$b]"))
+
+	ya,yb = ϕ(a),ϕ(b)
+	if a<1 && b>1 # not in an interval where the function is convex/concave.
+		# TODO: improve fallback
+		return yb,ya
+	end
+
+	# bound by line above (convex) or below (concave) ϕ in the interval
+	y2 = (yb-ya)*((x-a)/(b-a)) + ya
+
+	# lower bound (convex) or upper bound (concave) using Jensen's inqueality.
+	y1 = ϕ(x)
+
+	if b<=1 # concave
+		y2, y1
+	else # convex
+		y1, y2
+	end
+end
 
 
 """
