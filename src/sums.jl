@@ -9,11 +9,10 @@ function binary_reduce(op::F, ::Type{T}, x, final) where {F,T}
 end
 binary_reduce(op, x::AbstractVector{T}, final) where T = binary_reduce(op, T, x, final)
 
-function pyramid(f, r, nbrLevels)
-	v = [r]
+function pyramid(f, x, nbrLevels)
+	v = [x]
 	for i=2:nbrLevels
-		r = f(r)
-		push!(v, r)
+		push!(v, f(v[end]))
 	end
 	v
 end
