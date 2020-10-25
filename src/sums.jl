@@ -9,38 +9,27 @@ function binary_reduce(op::F, ::Type{T}, x, final) where {F,T}
 end
 binary_reduce(op, x::AbstractVector{T}, final) where T = binary_reduce(op, T, x, final)
 
-diagonalsum(x) = (N=length(x); sum(z->z[1]*z[2], zip(x,-N+1:2:N-1)))
-
-
-# TESTING
-mutable struct DiagonalContext{T}
-	allIntervalSums::T
-	intervalSize::Int
-	N::Int
-	level::Int
-end
-DiagonalContext(allIntervalSums, leafSize, N) =
-	DiagonalContext(allIntervalSums, leafSize, N, 1)
-
-# Function barrier to help compiler
-diagonal_reduction(::Type{T},N,diagonalSums,intervalSums,intervalSize) where T =
-	binary_reduce((i1,i2)->diagonalSums[i1]+diagonalSums[i2]+intervalSize*intervalSums[i2] - min(N-i1*intervalSize,intervalSize)*intervalSums[i1], T, 1:length(diagonalSums), diagonalSums[end])
-function diagonal_reduction(diagonalSums::AbstractVector{T}, context::DiagonalContext) where T
-	diagonalSums = diagonal_reduction(T, context.N, diagonalSums, context.allIntervalSums[context.level], context.intervalSize)
-	context.level += 1
-	context.intervalSize *= 2
-	diagonalSums
-end
-
-function pyramid(f, r)
+function pyramid(f, r, nbrLevels)
 	v = [r]
-	while length(r)>1
+	for i=2:nbrLevels
 		r = f(r)
 		push!(v, r)
 	end
 	v
 end
 
+diagonalsum(x) = (N=length(x); sum(z->z[1]*z[2], zip(x,-N+1:2:N-1)))
+
+# Function barrier to help compiler
+diagonal_reduction(::Type{T},N,diagonalSums,intervalSums,intervalSize) where T =
+	binary_reduce((i1,i2)->diagonalSums[i1]+diagonalSums[i2]+intervalSize*intervalSums[i2] - min(N-i1*intervalSize,intervalSize)*intervalSums[i1], T, 1:length(diagonalSums), diagonalSums[end])
+function diagonal_reduction(t::Tuple{AbstractVector{T},Int}, allIntervalSums, N, leafSize) where T
+	diagonalSums,level = t[1],t[2]
+	diagonalSums = diagonal_reduction(T, N, diagonalSums, allIntervalSums[level], leafSize*(2^(level-1)))
+	diagonalSums,level+1
+end
+
+nbrlevels(N,leafSize) = Int(log2(nextpow(2, div(N+leafSize-1,leafSize))))+1
 
 struct SumTree{T}
 	leafSize::Int
@@ -49,15 +38,13 @@ struct SumTree{T}
 end
 function SumTree(X::AbstractVector{T}, leafSize) where T
 	N = length(X)
+	nbrLevels = nbrlevels(N,leafSize)
 
-	# TESTING
 	intervalSums = map(sum, Iterators.partition(X,leafSize))
-	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums)
+	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums, nbrLevels)
 
-	context = DiagonalContext(allIntervalSums, leafSize, length(X))
 	diagonalSums = map(diagonalsum, Iterators.partition(X,leafSize))
-	allDiagonalSums = pyramid(z->diagonal_reduction(z,context), diagonalSums)
-
+	allDiagonalSums = first.(pyramid(z->diagonal_reduction(z,allIntervalSums,N,leafSize), (diagonalSums,1), nbrLevels))
 
 	SumTree(leafSize, reverse(allIntervalSums), reverse(allDiagonalSums))
 end
