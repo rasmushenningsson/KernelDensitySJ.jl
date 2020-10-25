@@ -16,6 +16,23 @@ diagonal_reduction(::Type{T},N,diagonalSums,intervalSums,intervalSize) where T =
 	binary_reduce((i1,i2)->diagonalSums[i1]+diagonalSums[i2]+intervalSize*intervalSums[i2] - min(N-i1*intervalSize,intervalSize)*intervalSums[i1], T, 1:length(diagonalSums), diagonalSums[end])
 
 
+# TESTING
+mutable struct DiagonalContext{T}
+	allIntervalSums::T
+	intervalSize::Int
+	N::Int
+	level::Int
+end
+DiagonalContext(allIntervalSums, leafSize, N) =
+	DiagonalContext(allIntervalSums, leafSize, N, 1)
+
+function diagonal_reduce(diagonalSums::AbstractVector{T}, context::DiagonalContext) where T
+	diagonalSums = diagonal_reduction(T, context.N, diagonalSums, context.allIntervalSums[context.level], context.intervalSize)
+	context.level += 1
+	context.intervalSize *= 2
+	diagonalSums
+end
+
 # function pyramid(leaffun, reducefun, X, leafSize)
 # 	r = map(leaffun, Iterators.partition(X,leafSize))
 # 	v = [r]
@@ -25,10 +42,10 @@ diagonal_reduction(::Type{T},N,diagonalSums,intervalSums,intervalSize) where T =
 # 	end
 # 	v
 # end
-function pyramid(reducefun, r)
+function pyramid(f, r)
 	v = [r]
 	while length(r)>1
-		r = reducefun(r)
+		r = f(r)
 		push!(v, r)
 	end
 	v
@@ -43,23 +60,28 @@ end
 function SumTree(X::AbstractVector{T}, leafSize) where T
 	N = length(X)
 
-	intervalSums = map(sum, Iterators.partition(X,leafSize))
-	diagonalSums = map(diagonalsum, Iterators.partition(X,leafSize))
-	allIntervalSums,allDiagonalSums = [intervalSums],[diagonalSums]
+	# intervalSums = map(sum, Iterators.partition(X,leafSize))
+	# diagonalSums = map(diagonalsum, Iterators.partition(X,leafSize))
+	# allIntervalSums,allDiagonalSums = [intervalSums],[diagonalSums]
 
-	intervalSize = leafSize
-	while length(intervalSums)>1
-		diagonalSums = diagonal_reduction(T, N, diagonalSums, intervalSums, intervalSize)
-		intervalSums = binary_reduce(+,intervalSums,intervalSums[end])
+	# intervalSize = leafSize
+	# while length(intervalSums)>1
+	# 	diagonalSums = diagonal_reduction(T, N, diagonalSums, intervalSums, intervalSize)
+	# 	intervalSums = binary_reduce(+,intervalSums,intervalSums[end])
 
-		push!(allIntervalSums,intervalSums)
-		push!(allDiagonalSums,diagonalSums)
-		intervalSize *= 2
-	end
+	# 	push!(allIntervalSums,intervalSums)
+	# 	push!(allDiagonalSums,diagonalSums)
+	# 	intervalSize *= 2
+	# end
 
 	# TESTING
 	intervalSums = map(sum, Iterators.partition(X,leafSize))
 	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums)
+
+	context = DiagonalContext(allIntervalSums, leafSize, length(X))
+	diagonalSums = map(diagonalsum, Iterators.partition(X,leafSize))
+	allDiagonalSums = pyramid(z->diagonal_reduce(z,context), diagonalSums)
+
 
 	SumTree(leafSize, reverse(allIntervalSums), reverse(allDiagonalSums))
 end
