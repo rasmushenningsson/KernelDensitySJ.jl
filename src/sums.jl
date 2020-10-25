@@ -46,6 +46,6 @@ function SumTree(X::AbstractVector{T}, leafSize) where T
 	diagonalSums = map(diagonalsum, Iterators.partition(X,leafSize))
 	allDiagonalSums = first.(pyramid(z->diagonal_reduction(z,allIntervalSums,N,leafSize), (diagonalSums,1), nbrLevels))
 
-	SumTree(leafSize, reverse(allIntervalSums), reverse(allDiagonalSums))
+	SumTree(leafSize, reverse!(allIntervalSums), reverse!(allDiagonalSums))
 end
 depth(t::SumTree) = length(t.intervalSums)
