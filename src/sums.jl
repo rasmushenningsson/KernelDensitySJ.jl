@@ -52,14 +52,26 @@ function SumTree(X::AbstractVector{T}, leafSize) where T
 	SumTree(leafSize, reverse!(allIntervalSums), reverse!(allDiagonalSums))
 end
 
+struct MinMaxTree{T} <: Tree
+	leafSize::Int
+	intervalSums::Vector{Vector{T}}
+	mins::Vector{Vector{T}}
+	maxes::Vector{Vector{T}}
+end
+function MinMaxTree(X, Y, leafSize)
+	@assert length(X)==length(Y)
+	nbrLevels = nbrlevels(length(X),leafSize)
+	intervalSums = map(sum, Iterators.partition(X,leafSize))
+	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums, nbrLevels)
+	mins = map(minimum, Iterators.partition(Y,leafSize))
+	allMins = pyramid(z->binary_reduce(min,z,z[end]), mins, nbrLevels)
+	maxes = map(maximum, Iterators.partition(Y,leafSize))
+	allMaxes = pyramid(z->binary_reduce(max,z,z[end]), maxes, nbrLevels)
+	MinMaxTree(leafSize,reverse!(allIntervalSums),reverse!(allMins),reverse!(allMaxes))
+end
 
 struct WeightTree{T} <: Tree
 	leafSize::Int
 	intervalSums::Vector{Vector{T}}
 end
-function WeightTree(X::AbstractVector, leafSize) where T
-	N = length(X)
-	intervalSums = map(sum, Iterators.partition(X,leafSize))
-	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums, nbrlevels(N,leafSize))
-	WeightTree(leafSize,reverse!(allIntervalSums))
-end
+WeightTree(tree::MinMaxTree) = WeightTree(tree.leafSize, tree.intervalSums)

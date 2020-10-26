@@ -7,11 +7,26 @@ end
 Base.isless(b1::SmoothBlock,b2::SmoothBlock) = isless(b1.ub-b1.lb, b2.ub-b2.lb)
 
 
-function smoothexact(::Type{T},i,C,X,xeval,leafSize) where T
+adjustbounds(lb,ub,::WeightTree,::Any,::Any) = lb,ub
+function adjustbounds(lb,ub,tree::MinMaxTree,depth,i)
+	m = tree.mins[depth][i]
+	M = tree.maxes[depth][i]
+	min(m*lb,m*ub), max(M*lb,M*ub) # assumes that 0≤lb≤ub
+end
+
+
+function smoothexact(::Type{T},i,C,X,Y,xeval,leafSize) where T
 	n = length(X)
 	k1 = (i-1)*leafSize+1
 	k2 = min(i*leafSize, n)
-	sum(ϕ.(C.*(X[k1:k2].-xeval))) # TODO: optimize (avoid allocations etc)
+
+	# TODO: optimize (avoid allocations etc)
+	# TODO: use dispatch instead
+	if isnothing(Y)
+		sum(ϕ.(C.*(X[k1:k2].-xeval)))
+	else
+		sum(Y[k1:k2].*ϕ.(C.*(X[k1:k2].-xeval)))
+	end
 end
 
 
@@ -33,15 +48,17 @@ function smoothbounds(::Type{T}, depth, i, C, X, tree, xeval) where T
 		# TODO: improve bounds? (We can use Jensen's inequality for this case too, if -1≤a≤b≤1, but ϕbounds() implementation needs to be updated)
 		lb = ϕ(max(-a,b))
 		ub = 1/√(2π)
-		return npoints.*(lb,ub)
+		# return npoints.*(lb,ub)
+		return adjustbounds((npoints.*(lb,ub))..., tree, depth, i)
 	elseif a<0
 		a,b,xMean = -b,-a,-xMean # mirror
 	end
 
-	npoints.*ϕbounds(a,b,xMean)
+	# npoints.*ϕbounds(a,b,xMean)
+	adjustbounds((npoints.*ϕbounds(a,b,xMean))..., tree, depth, i)
 end
 
-function smoothstep!(::Type{T},heap,C,X,tree,xeval) where T
+function smoothstep!(::Type{T},heap,C,X,Y,tree,xeval) where T
 	block = pop!(heap)
 
 	# remove existing bounds
@@ -50,7 +67,7 @@ function smoothstep!(::Type{T},heap,C,X,tree,xeval) where T
 
 	if block.depth >= depth(tree) # Fallback to exact sum
 		# s = 0.0 # TODO: compute exact sum
-		s = smoothexact(T,block.i,C,X,xeval,tree.leafSize)
+		s = smoothexact(T,block.i,C,X,Y,xeval,tree.leafSize)
 		lb += s
 		ub += s
 	else # create child blocks
@@ -74,20 +91,20 @@ function smoothstep!(::Type{T},heap,C,X,tree,xeval) where T
 end
 
 
-function smoothapprox(::Type{T},C,X,tree,xeval;rtol) where T
+function smoothapprox(::Type{T},C,X,Y,tree,xeval;rtol) where T
 	heap = BinaryMaxHeap{SmoothBlock}()
 
 	lb,ub = smoothbounds(T,1,1,C,X,tree,xeval)
 	push!(heap,SmoothBlock(1,1,lb,ub))
 	while !isempty(heap) && !isapprox(lb,ub;rtol=rtol)
-		lb,ub = (lb,ub) .+ smoothstep!(T,heap,C,X,tree,xeval)
+		lb,ub = (lb,ub) .+ smoothstep!(T,heap,C,X,Y,tree,xeval)
 	end
 	lb,ub
 end
 
 
 # Work in progress. Only for one point so far.
-function gaussiansmoothing(x, y, bandwidth, xeval::Number; leafSize=10, rtol=1e-3)
+function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval::Number; leafSize=10, rtol=1e-3) where T
 	@assert length(x)==length(y)
 	c = 1/(2*bandwidth^2)
 
@@ -104,7 +121,17 @@ function gaussiansmoothing(x, y, bandwidth, xeval::Number; leafSize=10, rtol=1e-
 	# exp(-((x-xeval)/bandwidth).^2 / 2)
 	C = 1/bandwidth
 
-	weightTree = WeightTree(x,leafSize)
+	# weightTree = WeightTree(x,leafSize)
+	minMaxTree = MinMaxTree(x,y,leafSize)
+	weightTree = WeightTree(minMaxTree)
 
-	wSum = smoothapprox(Float64, C, x, weightTree, xeval; rtol=rtol)
+	# TODO: tighten rtol for numerator & denominator to get the desired accuracy in the final result
+	denom = smoothapprox(T, C, x, nothing, weightTree, xeval; rtol=rtol)
+	numer = smoothapprox(T, C, x, y,       minMaxTree, xeval; rtol=rtol)
+
+	# use that the denominator is positive
+	lb = min((numer[1]./denom)...)
+	ub = max((numer[2]./denom)...)
+	lb,ub
+	(lb+ub)/2
 end
