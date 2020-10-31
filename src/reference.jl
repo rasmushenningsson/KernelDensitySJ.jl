@@ -78,7 +78,8 @@ function gaussiansmoothing_reference(x::AbstractVector{<:T1}, y::AbstractVector{
 	smoothed = similar(xeval, promote_type(S,T1,T2,T3))
 	w = similar(x, promote_type(T1,T2,T3))
 	for i=1:length(xeval)
-		w .= exp.(-c*(x.-xeval[i]).^2)
+		v = -c*(x.-xeval[i]).^2
+		w .= exp.(v .- maximum(v)) # multiply all weights with a factor for improved precision
 		smoothed[i] = y'w / sum(w)
 	end
 	smoothed
