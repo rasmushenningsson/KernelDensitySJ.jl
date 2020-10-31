@@ -19,7 +19,7 @@
 
 Let `x` be the mean of a set of points {xᵢ} such that xᵢ∈[`a`,`b`] ∀i.
 ϕbounds computes lower and upper bounds for ∑ᵢϕ(xᵢ)/n, where n is the number of points.
-`D` is a rescaling that can be used for better numerical precision. ϕ(x) := 1/√(2π) * exp(D-x^2/2)
+`D` is a rescaling that can be used for better numerical precision. ϕ(x) := 1/√(2π) * exp(D^2/2 - x^2/2)
 """
 function ϕbounds(a,b,x,D)::Tuple{Float64,Float64}
 	if b-a < 1e-9 # to avoid div by zero
