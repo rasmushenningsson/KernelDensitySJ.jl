@@ -108,9 +108,9 @@ end
 function _gaussiansmoothing(weightTree::WeightTree{T}, minMaxTree::MinMaxTree{T}, x, y, C, xeval, rtol) where T
 	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
 	r = searchsorted(x,xeval)
-	D1 = (x[min(first(r),length(x))]-xeval)^2/2
-	D2 = (x[max(last(r),1)]-xeval)^2/2
-	D = C^2*min(D1,D2)
+	D1 = (x[min(first(r),length(x))]-xeval)
+	D2 = (x[max(last(r),1)]-xeval)
+	D = C * (abs(D1)<abs(D2) ? D1 : D2)
 
 	# TODO: tighten rtol for numerator & denominator to get the desired accuracy in the final result
 	denom = smoothapprox(T, C, D, x, nothing, weightTree, xeval; rtol=rtol)

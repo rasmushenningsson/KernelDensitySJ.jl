@@ -1,5 +1,5 @@
 ϕ(x) = 1/√(2π) * exp(-x^2/2)
-ϕ(x,D) = 1/√(2π) * exp(D-x^2/2) # rescaling that can be used for improved numerical precision
+ϕ(x,D) = 1/√(2π) * exp((D-x)*(D+x)/2) # rescaling that can be used for improved numerical precision
 
 # ϕ2(x) = (x*x-1)*ϕ(x) # For reference: used to find intervals where ϕ is convex or concave.
 
