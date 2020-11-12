@@ -1,3 +1,5 @@
+using Roots
+
 # Unoptimized reference implementation
 function SD_reference(α, X::AbstractArray{T}) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
