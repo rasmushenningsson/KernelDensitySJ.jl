@@ -126,7 +126,6 @@ end
 
 function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, rtol=1e-3) where T
 	@assert length(x)==length(y)
-	c = 1/(2*bandwidth^2)
 
 	if !issorted(x)
 		perm = sortperm(x)
@@ -134,16 +133,10 @@ function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth
 		y = y[perm]
 	end
 
-	# ϕ(x) = 1/√(2π) * exp(-x^2/2)
-	# c = 1/(2*bandwidth^2)
-	# w .= exp.(-c*(x.-xeval[i]).^2)
-	# exp(-c*(x-xeval).^2)
-	# exp(-((x-xeval)/bandwidth).^2 / 2)
-	C = 1/bandwidth
-
 	# weightTree = WeightTree(x,leafSize)
 	minMaxTree = MinMaxTree(x,y,leafSize)
 	weightTree = WeightTree(minMaxTree)
 
+	C = 1/bandwidth
 	_gaussiansmoothing.(Ref(weightTree),Ref(minMaxTree),Ref(x),Ref(y),C,xeval,rtol)
 end
