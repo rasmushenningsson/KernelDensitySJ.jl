@@ -10,3 +10,6 @@ include("reference.jl")
 @testset "Bandwidth" begin
 	include("test_bw.jl")
 end
+@testset "Smoothing" begin
+	include("test_smooth.jl")
+end
