@@ -38,10 +38,9 @@
 		xeval = [0.0]
 		bandwidths = 10.0.^(-3:3)
 		ground_truth = [-2.79999999999999982236, -2.79999999999999982236, -2.79999999999999982236, -2.29473588724824868121, 3.20241290611236881292, 4.78316896715214792770, 4.79983163801801130898]
-		@testset "bandwidth=$bw" for (bw,gt) in zip(bandwidths,ground_truth)
-			@test f(x,y,bw,xeval) ≈ [gt] rtol=1e-3
-			@test f(x.*-3.1.-7.8,y,bw.*3.1,xeval.-7.8) ≈ [gt] rtol=1e-3
-		end
+
+		@test f(x,y,bandwidths,xeval) ≈ ground_truth rtol=1e-3
+		@test f(x.*-3.1.-7.8,y,bandwidths.*3.1,xeval.-7.8) ≈ ground_truth rtol=1e-3
 	end
 end
 

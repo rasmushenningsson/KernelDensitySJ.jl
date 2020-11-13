@@ -123,7 +123,9 @@ function _gaussiansmoothing(weightTree::WeightTree{T}, minMaxTree::MinMaxTree{T}
 	(lb+ub)/2
 end
 
-
+"""
+	gaussiansmoothing(x, y, bandwidth, xeval; leafSize=10, rtol=1e-3)
+"""
 function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, rtol=1e-3) where T
 	@assert length(x)==length(y)
 
@@ -133,10 +135,9 @@ function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth
 		y = y[perm]
 	end
 
-	# weightTree = WeightTree(x,leafSize)
 	minMaxTree = MinMaxTree(x,y,leafSize)
 	weightTree = WeightTree(minMaxTree)
 
-	C = 1/bandwidth
+	C = 1 ./ bandwidth
 	_gaussiansmoothing.(Ref(weightTree),Ref(minMaxTree),Ref(x),Ref(y),C,xeval,rtol)
 end
