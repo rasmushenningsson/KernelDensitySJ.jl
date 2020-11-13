@@ -25,6 +25,11 @@
 		@test f(x,y,1e5,[0.6]) ≈ [0.5]
 		@test f(x,y,1e-100,[0.6]) ≈ [1.0]
 		@test f(x,y,1e100,[0.6]) ≈ [0.5]
+
+		@test f(x,y,1e-5,[0.4]) ≈ [0.0] atol=1e-9
+		@test f(x,y,1e5,[0.4]) ≈ [0.5]
+		@test f(x,y,1e-100,[0.4]) ≈ [0.0] atol=1e-9
+		@test f(x,y,1e100,[0.4]) ≈ [0.5]
 	end
 
 	@testset "fewpoints" begin
