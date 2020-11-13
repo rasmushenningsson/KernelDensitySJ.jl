@@ -46,7 +46,7 @@
 end
 
 
-@testset "npoints=N" for N in [99,100,101,995,1000,1005,9997,10000,10003]
+@testset "npoints=$N" for N in [99,100,101,995,1000,1005,9997,10000,10003]
 	rng = StableRNG(42)
 	x = randn(rng, N)
 	y = randn(rng, N)
