@@ -119,7 +119,6 @@ function _gaussiansmoothing(weightTree::WeightTree{T}, minMaxTree::MinMaxTree{T}
 	# use that the denominator is positive
 	lb = min((numer[1]./denom)...)
 	ub = max((numer[2]./denom)...)
-	lb,ub
 	(lb+ub)/2
 end
 
@@ -128,6 +127,8 @@ end
 
 Evaluate the Gaussian Kernel Smoother of a set of data points with coordinates `x` and values `y`, with the specified `bandwidth`, at the coordinates in `xeval`.
 The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
+
+The accuracy of the result is controlled by `rtol`. `gaussiansmoothing` gradually improves lower and upper bounds `lb≤f(x₀)≤ub` until `isapprox(lb,ub;rtol=rtol)`.
 
 It is much more efficient to call `gaussiansmoothing` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `gaussiansmoothing` multiple times.
 """
