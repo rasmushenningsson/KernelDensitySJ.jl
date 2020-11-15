@@ -91,7 +91,7 @@ function smoothstep!(::Type{T},heap,C,D,X,Y,tree,xeval) where T
 end
 
 
-struct GaussianKernelSmoother{TX,TY,T}
+struct GaussianKernelSmoother{T,TX,TY}
 	x::TX
 	y::TY
 	minMaxTree::MinMaxTree{T}
@@ -110,20 +110,34 @@ function GaussianKernelSmoother(x, y; leafSize=10)
 end
 
 
-function smoothapprox(::Type{T},C,D,X,Y,tree,xeval;rtol) where T
-	heap = BinaryMaxHeap{SmoothBlock}()
 
-	lb,ub = smoothbounds(T,1,1,C,D,X,tree,xeval)
+function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;rtol) where T
+	heapn = BinaryMaxHeap{SmoothBlock}()
+	heapd = BinaryMaxHeap{SmoothBlock}()
 
-	push!(heap,SmoothBlock(1,1,lb,ub))
-	while !isempty(heap) && !isapprox(lb,ub;rtol=rtol)
-		lb,ub = (lb,ub) .+ smoothstep!(T,heap,C,D,X,Y,tree,xeval)
+	lbn,ubn = smoothbounds(T,1,1,C,D,gks.x,gks.minMaxTree,xeval)
+	push!(heapn,SmoothBlock(1,1,lbn,ubn))
+	lbd,ubd = smoothbounds(T,1,1,C,D,gks.x,gks.weightTree,xeval)
+	push!(heapd,SmoothBlock(1,1,lbd,ubd))
+
+	while true
+		lb = min(lbn/lbd,lbn/ubd)
+		ub = max(ubn/lbd,ubn/ubd)
+
+		isempty(heapn) && isempty(heapd) && return lb,ub
+		isapprox(lb,ub;rtol=rtol) && return lb,ub
+
+		if !isempty(heapn)
+			lbn,ubn = (lbn,ubn) .+ smoothstep!(T,heapn,C,D,gks.x,gks.y,  gks.minMaxTree,xeval)
+		end
+		if !isempty(heapd)
+			lbd,ubd = (lbd,ubd) .+ smoothstep!(T,heapd,C,D,gks.x,nothing,gks.weightTree,xeval)
+		end
 	end
-	lb,ub
 end
 
 
-function (gks::GaussianKernelSmoother{TX,TY,T})(bandwidth, xeval; rtol=1e-3) where {TX,TY,T}
+function (gks::GaussianKernelSmoother{T})(bandwidth, xeval; rtol=1e-3) where T
 	x,y = gks.x,gks.y
 	C = 1 / bandwidth
 	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
@@ -132,13 +146,7 @@ function (gks::GaussianKernelSmoother{TX,TY,T})(bandwidth, xeval; rtol=1e-3) whe
 	D2 = (x[max(last(r),1)]-xeval)
 	D = C * (abs(D1)<abs(D2) ? D1 : D2)
 
-	# TODO: tighten rtol for numerator & denominator to get the desired accuracy in the final result
-	denom = smoothapprox(T, C, D, x, nothing, gks.weightTree, xeval; rtol=rtol)
-	numer = smoothapprox(T, C, D, x, y,       gks.minMaxTree, xeval; rtol=rtol)
-
-	# use that the denominator is positive
-	lb = min((numer[1]./denom)...)
-	ub = max((numer[2]./denom)...)
+	lb,ub = smoothapprox(gks,C,D,xeval; rtol=rtol)
 	(lb+ub)/2
 end
 
