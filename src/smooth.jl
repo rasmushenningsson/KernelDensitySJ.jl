@@ -91,6 +91,25 @@ function smoothstep!(::Type{T},heap,C,D,X,Y,tree,xeval) where T
 end
 
 
+struct GaussianKernelSmoother{TX,TY,T}
+	x::TX
+	y::TY
+	minMaxTree::MinMaxTree{T}
+	weightTree::WeightTree{T}
+end
+function GaussianKernelSmoother(x, y; leafSize=10)
+	@assert length(x)==length(y)
+	if !issorted(x)
+		perm = sortperm(x)
+		x = x[perm]
+		y = y[perm]
+	end
+	minMaxTree = MinMaxTree(x,y,leafSize)
+	weightTree = WeightTree(minMaxTree)
+	GaussianKernelSmoother(x,y,minMaxTree,weightTree)
+end
+
+
 function smoothapprox(::Type{T},C,D,X,Y,tree,xeval;rtol) where T
 	heap = BinaryMaxHeap{SmoothBlock}()
 
@@ -104,8 +123,9 @@ function smoothapprox(::Type{T},C,D,X,Y,tree,xeval;rtol) where T
 end
 
 
-
-function _gaussiansmoothing(weightTree::WeightTree{T}, minMaxTree::MinMaxTree{T}, x, y, C, xeval, rtol) where T
+function (gks::GaussianKernelSmoother{TX,TY,T})(bandwidth, xeval; rtol=1e-3) where {TX,TY,T}
+	x,y = gks.x,gks.y
+	C = 1 / bandwidth
 	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
 	r = searchsorted(x,xeval)
 	D1 = (x[min(first(r),length(x))]-xeval)
@@ -113,8 +133,8 @@ function _gaussiansmoothing(weightTree::WeightTree{T}, minMaxTree::MinMaxTree{T}
 	D = C * (abs(D1)<abs(D2) ? D1 : D2)
 
 	# TODO: tighten rtol for numerator & denominator to get the desired accuracy in the final result
-	denom = smoothapprox(T, C, D, x, nothing, weightTree, xeval; rtol=rtol)
-	numer = smoothapprox(T, C, D, x, y,       minMaxTree, xeval; rtol=rtol)
+	denom = smoothapprox(T, C, D, x, nothing, gks.weightTree, xeval; rtol=rtol)
+	numer = smoothapprox(T, C, D, x, y,       gks.minMaxTree, xeval; rtol=rtol)
 
 	# use that the denominator is positive
 	lb = min((numer[1]./denom)...)
@@ -133,17 +153,6 @@ The accuracy of the result is controlled by `rtol`. `gaussiansmoothing` graduall
 It is much more efficient to call `gaussiansmoothing` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `gaussiansmoothing` multiple times.
 """
 function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, rtol=1e-3) where T
-	@assert length(x)==length(y)
-
-	if !issorted(x)
-		perm = sortperm(x)
-		x = x[perm]
-		y = y[perm]
-	end
-
-	minMaxTree = MinMaxTree(x,y,leafSize)
-	weightTree = WeightTree(minMaxTree)
-
-	C = 1 ./ bandwidth
-	_gaussiansmoothing.(Ref(weightTree),Ref(minMaxTree),Ref(x),Ref(y),C,xeval,rtol)
+	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
+	gks.(bandwidth, xeval; rtol=rtol)
 end
