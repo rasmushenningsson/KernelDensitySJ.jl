@@ -91,6 +91,13 @@ function smoothstep!(::Type{T},heap,C,D,X,Y,tree,xeval) where T
 end
 
 
+"""
+	GaussianKernelSmoother(x,y; leafSize=10)
+
+Create a callable `GaussianKernelSmoother` object of a set of data points with coordinates `x` and values `y`.
+
+See also `gaussiansmoothing`.
+"""
 struct GaussianKernelSmoother{T,TX,TY}
 	x::TX
 	y::TY
@@ -137,7 +144,22 @@ function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;rtol) where T
 end
 
 
-function (gks::GaussianKernelSmoother{T})(bandwidth, xeval; rtol=1e-3) where T
+"""
+	(::GaussianKernelSmoother)(bandwidth, xeval; rtol=1e-3)
+
+Calling a GaussianKernelSmoother object evaluates the smoothed function for the given `bandwidth` and `xeval`.
+The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
+
+The accuracy of the result is controlled by `rtol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol)`.
+
+# Examples
+```julia-repl
+julia> g = GaussianKernelSmoother([0.0,1.0],[2.0,4.0]);
+julia> g(1, 0.9)
+3.197375320224904
+```
+"""
+function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; rtol=1e-3)
 	x,y = gks.x,gks.y
 	C = 1 / bandwidth
 	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
@@ -156,9 +178,11 @@ end
 Evaluate the Gaussian Kernel Smoother of a set of data points with coordinates `x` and values `y`, with the specified `bandwidth`, at the coordinates in `xeval`.
 The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
 
-The accuracy of the result is controlled by `rtol`. `gaussiansmoothing` gradually improves lower and upper bounds `lb≤f(x₀)≤ub` until `isapprox(lb,ub;rtol=rtol)`.
+The accuracy of the result is controlled by `rtol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol)`.
 
 It is much more efficient to call `gaussiansmoothing` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `gaussiansmoothing` multiple times.
+
+See also `GaussianKernelSmoother`.
 """
 function gaussiansmoothing(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, rtol=1e-3) where T
 	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
