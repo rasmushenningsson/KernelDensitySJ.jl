@@ -57,7 +57,11 @@ end
 		@test smooth(x,y,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
 		@test smooth(x,y,bw,xeval;rtol=1e-6) ≈ gt rtol=1e-6
 		@test smooth(x,y,bw,xeval;rtol=1e-9) ≈ gt rtol=1e-9
+		@test smooth(x,y,bw,xeval;atol=1e-1) ≈ gt atol=1e-1
+		@test smooth(x,y,bw,xeval;atol=1e-3) ≈ gt atol=1e-3
+		@test smooth(x,y,bw,xeval;atol=1e-6) ≈ gt atol=1e-6
 		gks = GaussianKernelSmoother(x,y)
 		@test gks.(bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
+		@test gks.(bw,xeval;atol=1e-3) ≈ gt atol=1e-3
 	end
 end

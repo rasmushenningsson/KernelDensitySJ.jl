@@ -118,7 +118,7 @@ end
 
 
 
-function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;rtol) where T
+function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;atol,rtol) where T
 	heapn = BinaryMaxHeap{SmoothBlock}()
 	heapd = BinaryMaxHeap{SmoothBlock}()
 
@@ -132,7 +132,7 @@ function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;rtol) where T
 		ub = max(ubn/lbd,ubn/ubd)
 
 		isempty(heapn) && isempty(heapd) && return lb,ub
-		isapprox(lb,ub;rtol=rtol) && return lb,ub
+		isapprox(lb,ub;atol=atol,rtol=rtol) && return lb,ub
 
 		if !isempty(heapn)
 			lbn,ubn = (lbn,ubn) .+ smoothstep!(T,heapn,C,D,gks.x,gks.y,  gks.minMaxTree,xeval)
@@ -145,12 +145,12 @@ end
 
 
 """
-	(::GaussianKernelSmoother)(bandwidth, xeval; rtol=1e-3)
+	(::GaussianKernelSmoother)(bandwidth, xeval; rtol=atol>0 ? 0 : 1e-3, atol=0)
 
 Calling a GaussianKernelSmoother object evaluates the smoothed function for the given `bandwidth` and `xeval`.
 The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
 
-The accuracy of the result is controlled by `rtol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol)`.
+The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
 
 # Examples
 ```julia-repl
@@ -159,7 +159,7 @@ julia> g(1, 0.9)
 3.197375320224904
 ```
 """
-function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; rtol=1e-3)
+function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; atol=0, rtol=atol>0 ? 0 : 1e-3)
 	x,y = gks.x,gks.y
 	C = 1 / bandwidth
 	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
@@ -168,17 +168,17 @@ function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; rtol=1e-3)
 	D2 = (x[max(last(r),1)]-xeval)
 	D = C * (abs(D1)<abs(D2) ? D1 : D2)
 
-	lb,ub = smoothapprox(gks,C,D,xeval; rtol=rtol)
+	lb,ub = smoothapprox(gks,C,D,xeval; atol=atol, rtol=rtol)
 	(lb+ub)/2
 end
 
 """
-	smooth(x, y, bandwidth, xeval; leafSize=10, rtol=1e-3)
+	smooth(x, y, bandwidth, xeval; leafSize=10, rtol=atol>0 ? 0 : 1e-3, atol=0)
 
 Evaluate the Gaussian Kernel Smoother of a set of data points with coordinates `x` and values `y`, with the specified `bandwidth`, at the coordinates in `xeval`.
 The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
 
-The accuracy of the result is controlled by `rtol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol)`.
+The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
 
 It is much more efficient to call `smooth` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `smooth` multiple times.
 
@@ -192,7 +192,7 @@ julia> smooth([0.0,1.0], [2.0,4.0], 1.0, [0.1, 0.5, 0.9])
 ```
 See also `GaussianKernelSmoother`.
 """
-function smooth(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, rtol=1e-3) where T
+function smooth(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, kwargs...) where T
 	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
-	gks.(bandwidth, xeval; rtol=rtol)
+	gks.(bandwidth, xeval; kwargs...)
 end
