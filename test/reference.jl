@@ -1,3 +1,5 @@
+using Roots
+
 # Unoptimized reference implementation
 function SD_reference(α, X::AbstractArray{T}) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
@@ -69,3 +71,17 @@ end
 
 
 bwsj_reference(X; kwargs...) = _bwsj_reference(issorted(X) ? X : sort(X); kwargs...)
+
+
+function _smooth_reference(x,y,c,xeval,w)
+	w .= -c.*(x.-xeval).^2
+	w .= exp.(w .- maximum(w)) # multiply all weights with a factor for improved precision
+	y'w / sum(w)
+end
+
+function smooth_reference(x::AbstractVector{<:T}, y::AbstractVector{<:S}, bandwidth, xeval) where {T<:Real,S<:Real}
+	@assert length(x)==length(y)
+	c = 1 ./(2 .* bandwidth.^2)
+	w = similar(x, promote_type(T,eltype(bandwidth),eltype(xeval)))
+	_smooth_reference.(Ref(x),Ref(y),c,xeval,Ref(w))
+end
