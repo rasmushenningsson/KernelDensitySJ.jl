@@ -2,6 +2,12 @@
 	x = Float64[0,1]
 	xeval = Float64[0]
 	@test f(x,1/√2,xeval) ≈ [(1+exp(-1))/√(2π)]
+	@test f(x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)]
+	@test f(x,√2,xeval) ≈ [(1+exp(-1/4))/√(2π)]
+
+	@test f(x.+1,1,xeval.+1) ≈ [(1+exp(-1/2))/√(2π)] # translation
+	@test f(x.*5,5,xeval) ≈ [(1+exp(-1/2))/√(2π)] # scaling
+	@test f(-x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)] # mirror
 end
 
 @testset "$f" for f in (smooth_reference,smooth)
