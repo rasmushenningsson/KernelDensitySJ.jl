@@ -1,13 +1,25 @@
 @testset "$f" for f in (density_reference,density)
-	x = Float64[0,1]
-	xeval = Float64[0]
-	@test f(x,1/√2,xeval) ≈ [(1+exp(-1))/√(2π)]
-	@test f(x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)]
-	@test f(x,√2,xeval) ≈ [(1+exp(-1/4))/√(2π)]
+	@testset "twopoints" begin
+		x = Float64[0,1]
+		xeval = Float64[0]
+		@test f(x,1/√2,xeval) ≈ [(1+exp(-1))/√(2π)]
+		@test f(x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)]
+		@test f(x,√2,xeval) ≈ [(1+exp(-1/4))/√(2π)]
 
-	@test f(x.+1,1,xeval.+1) ≈ [(1+exp(-1/2))/√(2π)] # translation
-	@test f(x.*5,5,xeval) ≈ [(1+exp(-1/2))/√(2π)] # scaling
-	@test f(-x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)] # mirror
+		@test f(x.+1,1,xeval.+1) ≈ [(1+exp(-1/2))/√(2π)] # translation
+		@test f(x.*5,5,xeval) ≈ [(1+exp(-1/2))/√(2π)] # scaling
+		@test f(-x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)] # mirror
+	end
+
+	@testset "fewpoints" begin
+		x = [-4, 3.5, 10, 12]
+		xeval = [0.0]
+		bandwidths = 10.0.^(-3:3)
+		ground_truth = [0.0, 0.0, 3.940396277136473e-267, 0.0010065129208106456, 1.1796672667226176, 1.5903540165475287, 1.5957148171407638]
+
+		@test f(x,bandwidths,xeval) ≈ ground_truth rtol=1e-3
+		@test f(x.*-3.1.-7.8,bandwidths.*3.1,xeval.-7.8) ≈ ground_truth rtol=1e-3
+	end
 end
 
 @testset "$f" for f in (smooth_reference,smooth)
@@ -65,6 +77,11 @@ end
 
 	bandwidths = 10.0.^ [0,-1,1,-2,2,-3,3,-5,5,-10,10,-100,100]
 	@testset "bandwidth=$bw" for bw in bandwidths
+		gtd = density_reference(x,bw,xeval)
+		@test density(x,bw,xeval,rtol=1e-3) ≈ gtd atol=1e-12 rtol=1e-3
+		@test density(x,bw,xeval,rtol=1e-6) ≈ gtd atol=1e-12 rtol=1e-6
+		@test density(x,bw,xeval,rtol=1e-9) ≈ gtd atol=1e-12 rtol=1e-9
+
 		gt = smooth_reference(x,y,bw,xeval)
 		@test smooth(x,y,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
 		@test smooth(x,y,bw,xeval;rtol=1e-6) ≈ gt rtol=1e-6
@@ -72,7 +89,11 @@ end
 		@test smooth(x,y,bw,xeval;atol=1e-1) ≈ gt atol=1e-1
 		@test smooth(x,y,bw,xeval;atol=1e-3) ≈ gt atol=1e-3
 		@test smooth(x,y,bw,xeval;atol=1e-6) ≈ gt atol=1e-6
+
 		gks = GaussianKernelSmoother(x,y)
+		@test density(gks,bw,xeval;rtol=1e-3) ≈ gtd atol=1e-12 rtol=1e-3
+		@test density(gks,bw,xeval;atol=1e-3) ≈ gtd atol=1e-3
+
 		@test gks.(bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
 		@test gks.(bw,xeval;atol=1e-3) ≈ gt atol=1e-3
 	end

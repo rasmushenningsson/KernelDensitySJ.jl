@@ -87,7 +87,7 @@ function smooth_reference(x::AbstractVector{<:T}, y::AbstractVector{<:S}, bandwi
 end
 
 function _density_reference(x,c,xeval,w)
-	w .= exp.(w-c.*(x.-xeval).^2)
+	w .= exp.(-c.*(x.-xeval).^2)
 	1/√(2π)*sum(w)
 end
 
