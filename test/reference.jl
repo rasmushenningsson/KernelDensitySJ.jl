@@ -73,15 +73,15 @@ end
 bwsj_reference(X; kwargs...) = _bwsj_reference(issorted(X) ? X : sort(X); kwargs...)
 
 
-function _gaussiansmoothing_reference(x,y,c,xeval,w)
+function _smooth_reference(x,y,c,xeval,w)
 	w .= -c.*(x.-xeval).^2
 	w .= exp.(w .- maximum(w)) # multiply all weights with a factor for improved precision
 	y'w / sum(w)
 end
 
-function gaussiansmoothing_reference(x::AbstractVector{<:T}, y::AbstractVector{<:S}, bandwidth, xeval) where {T<:Real,S<:Real}
+function smooth_reference(x::AbstractVector{<:T}, y::AbstractVector{<:S}, bandwidth, xeval) where {T<:Real,S<:Real}
 	@assert length(x)==length(y)
 	c = 1 ./(2 .* bandwidth.^2)
 	w = similar(x, promote_type(T,eltype(bandwidth),eltype(xeval)))
-	_gaussiansmoothing_reference.(Ref(x),Ref(y),c,xeval,Ref(w))
+	_smooth_reference.(Ref(x),Ref(y),c,xeval,Ref(w))
 end

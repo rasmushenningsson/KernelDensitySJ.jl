@@ -1,4 +1,4 @@
-@testset "$f" for f in (gaussiansmoothing_reference,gaussiansmoothing)
+@testset "$f" for f in (smooth_reference,smooth)
 	@testset "twopoints" begin
 		x = Float64[0,1]
 		y = Float64[0,1]
@@ -53,9 +53,11 @@ end
 
 	bandwidths = 10.0.^ [0,-1,1,-2,2,-3,3,-5,5,-10,10,-100,100]
 	@testset "bandwidth=$bw" for bw in bandwidths
-		gt = gaussiansmoothing_reference(x,y,bw,xeval)
-		@test gaussiansmoothing(x,y,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
-		@test gaussiansmoothing(x,y,bw,xeval;rtol=1e-6) ≈ gt rtol=1e-6
-		@test gaussiansmoothing(x,y,bw,xeval;rtol=1e-9) ≈ gt rtol=1e-9
+		gt = smooth_reference(x,y,bw,xeval)
+		@test smooth(x,y,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
+		@test smooth(x,y,bw,xeval;rtol=1e-6) ≈ gt rtol=1e-6
+		@test smooth(x,y,bw,xeval;rtol=1e-9) ≈ gt rtol=1e-9
+		gks = GaussianKernelSmoother(x,y)
+		@test gks.(bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
 	end
 end
