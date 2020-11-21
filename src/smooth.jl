@@ -95,6 +95,7 @@ end
 	GaussianKernelSmoother(x,y; leafSize=10)
 
 Create a callable `GaussianKernelSmoother` object of a set of data points with coordinates `x` and values `y`.
+NB: References to `x` and `y` are stored in the GaussianKernelSmoother object, i.e. if you change `x` or `y` after creaing the GaussianKernelSmoother, you will get incorrect results.
 
 See also `smooth`.
 """
@@ -143,6 +144,24 @@ function smoothapprox(gks::GaussianKernelSmoother{T},C,D,xeval;atol,rtol) where 
 	end
 end
 
+function densityapprox(x,weightTree::WeightTree{T},C,D,xeval;atol,rtol) where T
+	heap = BinaryMaxHeap{SmoothBlock}()
+	lb,ub = smoothbounds(T,1,1,C,D,gks.x,gks.weightTree,xeval)
+	push!(heap,SmoothBlock(1,1,lbd,ubd))
+	while !isempty(heap) && !isapprox(lb,ub;atol=atol,rtol=rtol)
+		lb,ub = (lb,ub) .+ smoothstep!(T,heap,C,D,x,nothing,weightTree,xeval)
+	end
+	lb,ub
+end
+
+# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
+function weightscale(x,C,xeval)
+	r = searchsorted(x,xeval)
+	D1 = (x[min(first(r),length(x))]-xeval)
+	D2 = (x[max(last(r),1)]-xeval)
+	C * (abs(D1)<abs(D2) ? D1 : D2)
+end
+
 
 """
 	(::GaussianKernelSmoother)(bandwidth, xeval; rtol=atol>0 ? 0 : 1e-3, atol=0)
@@ -162,12 +181,7 @@ julia> g(1, 0.9)
 function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; atol=0, rtol=atol>0 ? 0 : 1e-3)
 	x,y = gks.x,gks.y
 	C = 1 / bandwidth
-	# compute constant D such that the weight of the closest point is normalized to 1, which is critical for numerical precision.
-	r = searchsorted(x,xeval)
-	D1 = (x[min(first(r),length(x))]-xeval)
-	D2 = (x[max(last(r),1)]-xeval)
-	D = C * (abs(D1)<abs(D2) ? D1 : D2)
-
+	D = weightscale(x,C,xeval)
 	lb,ub = smoothapprox(gks,C,D,xeval; atol=atol, rtol=rtol)
 	(lb+ub)/2
 end
@@ -196,3 +210,17 @@ function smooth(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; le
 	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
 	gks.(bandwidth, xeval; kwargs...)
 end
+
+
+
+function density(x,weightTree::WeightTree,xeval; atol=0, rtol=atol>0 ? 0 : 1e-3)
+	C = 1 / bandwidth
+	lb,ub = densityapprox(x,weightTree,C,0,xeval;atol,rtol)
+	(lb+ub)/2
+end
+function density(x::AbstractVector, bandwidth, xeval; leafSize=10, kwargs...)
+	x = issorted(x) ? x : sort(x)
+	density(x,WeightTree(x,leafSize),xeval; kwargs...)
+end
+density(gks::GaussianKernelSmoother, bandwidth, xeval; kwargs...) =
+	density(gks.x,gks.weightTree,xeval; kwargs...)

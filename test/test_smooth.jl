@@ -1,3 +1,6 @@
+@testset "$f" for f in (density_reference,density)
+end
+
 @testset "$f" for f in (smooth_reference,smooth)
 	@testset "twopoints" begin
 		x = Float64[0,1]

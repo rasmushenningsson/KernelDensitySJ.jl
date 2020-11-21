@@ -74,4 +74,10 @@ struct WeightTree{T} <: Tree
 	leafSize::Int
 	intervalSums::Vector{Vector{T}}
 end
+function WeightTree(X, leafSize)
+	nbrLevels = nbrlevels(length(X),leafSize)
+	intervalSums = map(sum, Iterators.partition(X,leafSize))
+	allIntervalSums = pyramid(z->binary_reduce(+,z,z[end]), intervalSums, nbrLevels)
+	WeightTree(leafSize,reverse!(allIntervalSums))
+end
 WeightTree(tree::MinMaxTree) = WeightTree(tree.leafSize, tree.intervalSums)
