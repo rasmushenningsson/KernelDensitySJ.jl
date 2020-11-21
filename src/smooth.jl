@@ -146,8 +146,8 @@ end
 
 function densityapprox(x,weightTree::WeightTree{T},C,D,xeval;atol,rtol) where T
 	heap = BinaryMaxHeap{SmoothBlock}()
-	lb,ub = smoothbounds(T,1,1,C,D,gks.x,gks.weightTree,xeval)
-	push!(heap,SmoothBlock(1,1,lbd,ubd))
+	lb,ub = smoothbounds(T,1,1,C,D,x,weightTree,xeval)
+	push!(heap,SmoothBlock(1,1,lb,ub))
 	while !isempty(heap) && !isapprox(lb,ub;atol=atol,rtol=rtol)
 		lb,ub = (lb,ub) .+ smoothstep!(T,heap,C,D,x,nothing,weightTree,xeval)
 	end
@@ -213,14 +213,14 @@ end
 
 
 
-function density(x,weightTree::WeightTree,xeval; atol=0, rtol=atol>0 ? 0 : 1e-3)
+function _density(x,weightTree::WeightTree,bandwidth,xeval; atol=0, rtol=atol>0 ? 0 : 1e-3)
 	C = 1 / bandwidth
 	lb,ub = densityapprox(x,weightTree,C,0,xeval;atol,rtol)
 	(lb+ub)/2
 end
 function density(x::AbstractVector, bandwidth, xeval; leafSize=10, kwargs...)
 	x = issorted(x) ? x : sort(x)
-	density(x,WeightTree(x,leafSize),xeval; kwargs...)
+	_density.(Ref(x),Ref(WeightTree(x,leafSize)),bandwidth,xeval; kwargs...)
 end
 density(gks::GaussianKernelSmoother, bandwidth, xeval; kwargs...) =
-	density(gks.x,gks.weightTree,xeval; kwargs...)
+	_density.(Ref(gks.x),Ref(gks.weightTree),bandwidth,xeval; kwargs...)
