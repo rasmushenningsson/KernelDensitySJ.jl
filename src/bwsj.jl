@@ -144,7 +144,7 @@ function objectivesign(h, X::AbstractArray{T}, tree::SumTree, α2Constant) where
 	n = length(X)
 	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
 
-	C = (n-1)*α2Constant^5*h^(-10/7)/(2*√π)
+	C = (n-1)*α2Constant^5*h^(-10/7)/√2
 	C -= n*ϕ4(0) # get rid of the diagonal entries
 	C/=2 # because of symmetry, we can sum over j>i (upper triangular part), effectively halving the sum
 

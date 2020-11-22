@@ -1,5 +1,6 @@
-ϕ(x) = 1/√(2π) * exp(-x^2/2)
-ϕ(x,D) = 1/√(2π) * exp((D-x)*(D+x)/2) # rescaling that can be used for improved numerical precision
+# NB: ϕ is scaled by √2π compared to standard definition
+ϕ(x) = exp(-x^2/2)
+ϕ(x,D) = exp((D-x)*(D+x)/2) # rescaling that can be used for improved numerical precision
 
 # ϕ2(x) = (x*x-1)*ϕ(x) # For reference: used to find intervals where ϕ is convex or concave.
 
@@ -138,7 +139,7 @@ function ϕ4extrema(a,b)
 	# x at extrema: -√(5+√10), √(5-√10), 0, √(5-√10), √(5+√10)
 	# we only need to consider x>0 since the function is even
 	xExt = (1.355626179974266, 2.8569700138728056)
-	yExt = (-0.7399861849949221, 0.13912184973492348)
+	yExt = (-1.8548702941445978, 0.34872676216452453)
 
 	# the implementation assumes 0<=a<=b
 	if b<=xExt[1] || a>=xExt[2]
@@ -160,8 +161,7 @@ function ϕ6extrema(a,b)
 	# ϕ6 has global minimum at 0, global maximum at x≈1.15, two more local extrema and ϕ6(x)→0 as x→∞.
 	# we only need to consider x>0 since the function is even
 	xExt = (1.154405394739968, 2.366759410734541, 3.750439717725742)
-	yExt = (4.2406124820663305, -1.4018233232694841, 0.15246889807941977)
-
+	yExt = (10.62963914930061, -3.513849978144481, 0.3821828509277058)
 	# the implementation assumes 0<=a<=b
 	if xExt[3]<=a || (xExt[1]<=a && b<=xExt[2])
 		ϕ6(b),ϕ6(a) # decreasing function in these intervals

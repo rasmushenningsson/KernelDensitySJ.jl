@@ -2,21 +2,20 @@
 	@testset "twopoints" begin
 		x = Float64[0,1]
 		xeval = Float64[0]
-		@test f(x,1/√2,xeval) ≈ [(1+exp(-1))/√(2π)]
-		@test f(x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)]
-		@test f(x,√2,xeval) ≈ [(1+exp(-1/4))/√(2π)]
+		@test f(x,1/√2,xeval) ≈ [1+exp(-1)]
+		@test f(x,1,xeval) ≈ [1+exp(-1/2)]
+		@test f(x,√2,xeval) ≈ [1+exp(-1/4)]
 
-		@test f(x.+1,1,xeval.+1) ≈ [(1+exp(-1/2))/√(2π)] # translation
-		@test f(x.*5,5,xeval) ≈ [(1+exp(-1/2))/√(2π)] # scaling
-		@test f(-x,1,xeval) ≈ [(1+exp(-1/2))/√(2π)] # mirror
+		@test f(x.+1,1,xeval.+1) ≈ [1+exp(-1/2)] # translation
+		@test f(x.*5,5,xeval) ≈ [1+exp(-1/2)] # scaling
+		@test f(-x,1,xeval) ≈ [1+exp(-1/2)] # mirror
 	end
 
 	@testset "fewpoints" begin
 		x = [-4, 3.5, 10, 12]
 		xeval = [0.0]
 		bandwidths = 10.0.^(-3:3)
-		ground_truth = [0.0, 0.0, 3.940396277136473e-267, 0.0010065129208106456, 1.1796672667226176, 1.5903540165475287, 1.5957148171407638]
-
+		ground_truth = [1.9876622182340899236e-2660054, 2.9039118290719408157e-26601, 9.8771087215205620167e-267, 0.0025229537460853969623, 2.9569873254235829194, 3.9864263445510130571, 3.9998638788926746489]
 		@test f(x,bandwidths,xeval) ≈ ground_truth rtol=1e-3
 		@test f(x.*-3.1.-7.8,bandwidths.*3.1,xeval.-7.8) ≈ ground_truth rtol=1e-3
 	end

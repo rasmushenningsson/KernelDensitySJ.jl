@@ -47,7 +47,7 @@ function smoothbounds(::Type{T}, depth, i, C, D, X, tree, xeval) where T
 		# special case, interval covers xeval
 		# TODO: improve bounds? (We can use Jensen's inequality for this case too, if -1≤a≤b≤1, but ϕbounds() implementation needs to be updated)
 		lb = ϕ(max(-a,b),D)
-		ub = 1/√(2π)
+		ub = ϕ(zero(T))
 		# return npoints.*(lb,ub)
 		return adjustbounds((npoints.*(lb,ub))..., tree, depth, i)
 	elseif a<0

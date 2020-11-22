@@ -1,6 +1,7 @@
 using Roots
 
 # Unoptimized reference implementation
+# NB: ϕ is scaled by √2π compared to standard definition
 function SD_reference(α, X::AbstractArray{T}) where T
 	# (n(n-1))⁻¹α⁻⁵∑ᵢ∑ⱼϕⁱᵛ(α⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
@@ -16,6 +17,7 @@ function SD_reference(α, X::AbstractArray{T}) where T
 	C * s
 end
 
+# NB: ϕ is scaled by √2π compared to standard definition
 function TD_reference(b, X::AbstractArray{T}) where T
 	# -(n(n-1))⁻¹b⁻⁷∑ᵢ∑ⱼϕᵛⁱ(b⁻¹(Xᵢ-Xⱼ))
 	n = length(X)
@@ -38,7 +40,7 @@ function objective_reference(h, X, α2Constant)
 	# σ⁴ₖ = 1
 	n = length(X)
 	α2 = α2Constant*h^(5/7) # 1.357[SD(a)/TD(b)]^(1/7) * h^(5/7)
-	1/(2*√(π)*n*h^5) - SD_reference(α2,X)
+	1/(√2*n*h^5) - SD_reference(α2,X)
 end
 
 
@@ -88,7 +90,7 @@ end
 
 function _density_reference(x,c,xeval,w)
 	w .= exp.(-c.*(x.-xeval).^2)
-	1/√(2π)*sum(w)
+	sum(w)
 end
 
 function density_reference(x::AbstractVector{<:T}, bandwidth, xeval) where {T<:Real}
