@@ -97,7 +97,7 @@ end
 Create a `GaussianKernelSmoother` object of a set of data points with coordinates `x` and values `y`.
 NB: References to `x` and `y` are stored in the GaussianKernelSmoother object, i.e. if you change `x` or `y` after creating the GaussianKernelSmoother, you will get incorrect results.
 
-See also `smooth`.
+See also `smooth`, `density`.
 """
 struct GaussianKernelSmoother{T,TX,TY}
 	x::TX
@@ -183,6 +183,8 @@ julia> smooth.(g, 1, [0.1, 0.5, 0.9])
  3.0
  3.197375320224904
 ```
+
+See also `GaussianKernelSmoother`, `density`.
 """
 function smooth(gks::GaussianKernelSmoother, bandwidth::Real, xeval::Real; atol=0, rtol=atol>0 ? 0 : 1e-3)
 	x,y = gks.x,gks.y
@@ -210,7 +212,7 @@ julia> smooth([0.0,1.0], [2.0,4.0], 1.0, [0.1, 0.5, 0.9])
  3.0
  3.197375320224904
 ```
-See also `GaussianKernelSmoother`.
+See also `GaussianKernelSmoother`, `density`.
 """
 function smooth(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, kwargs...) where T
 	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
@@ -219,14 +221,59 @@ end
 
 
 
-function _density(x,weightTree::WeightTree,bandwidth,xeval; atol=0, rtol=atol>0 ? 0 : 1e-3)
+function _density(x,weightTree::WeightTree,bandwidth,xeval; atol=1e-20, rtol=atol>1e-20 ? 0 : 1e-3)
 	C = 1 / bandwidth
 	lb,ub = densityapprox(x,weightTree,C,0,xeval;atol,rtol)
 	(lb+ub)/2
 end
+
+
+"""
+	density(x, bandwidth, xeval; leafSize=10, rtol=atol>1e-20 ? 0 : 1e-3, atol=1e-20)
+
+Evaluate the density of a Gaussian Kernel Smoother of a set of data points with coordinates `x`, with the specified `bandwidth`, at the coordinates in `xeval`.
+The value of the density `g` at `x₀` is given by `g(x₀) := ∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`.
+
+The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
+
+It is much more efficient to call `density` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `density` multiple times.
+
+# Examples
+```julia-repl
+julia> density([0.0,1.0], 1.0, [0.1, 0.5, 0.9])
+3-element Array{Float64,1}:
+ 1.6619892900511566
+ 1.764993805169191
+ 1.6619892900511566
+```
+See also `smooth`, `GaussianKernelSmoother`.
+"""
 function density(x::AbstractVector, bandwidth, xeval; leafSize=10, kwargs...)
 	x = issorted(x) ? x : sort(x)
 	_density.(Ref(x),Ref(WeightTree(x,leafSize)),bandwidth,xeval; kwargs...)
 end
+
+
+"""
+	density(gks::GaussianKernelSmoother, bandwidth, xeval; leafSize=10, rtol=atol>1e-20 ? 0 : 1e-3, atol=1e-20)
+
+Evaluate the density of a Gaussian Kernel Smoother, with the specified `bandwidth`, at the coordinates in `xeval`.
+The value of the density `g` at `x₀` is given by `g(x₀) := ∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`.
+
+The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
+
+It is much more efficient to call `density` once with vector/matrix arguments for `xeval` and/or `bandwidth` than to call `density` multiple times.
+
+# Examples
+```julia-repl
+julia> g = GaussianKernelSmoother([0.0,1.0],[2.0,4.0]);
+julia> density.(g, 1.0, [0.1, 0.5, 0.9])
+3-element Array{Float64,1}:
+ 1.6619892900511566
+ 1.764993805169191
+ 1.6619892900511566
+```
+See also `smooth`, `GaussianKernelSmoother`.
+"""
 density(gks::GaussianKernelSmoother, bandwidth, xeval; kwargs...) =
 	_density.(Ref(gks.x),Ref(gks.weightTree),bandwidth,xeval; kwargs...)
