@@ -94,8 +94,8 @@ end
 """
 	GaussianKernelSmoother(x,y; leafSize=10)
 
-Create a callable `GaussianKernelSmoother` object of a set of data points with coordinates `x` and values `y`.
-NB: References to `x` and `y` are stored in the GaussianKernelSmoother object, i.e. if you change `x` or `y` after creaing the GaussianKernelSmoother, you will get incorrect results.
+Create a `GaussianKernelSmoother` object of a set of data points with coordinates `x` and values `y`.
+NB: References to `x` and `y` are stored in the GaussianKernelSmoother object, i.e. if you change `x` or `y` after creating the GaussianKernelSmoother, you will get incorrect results.
 
 See also `smooth`.
 """
@@ -116,6 +116,9 @@ function GaussianKernelSmoother(x, y; leafSize=10)
 	weightTree = WeightTree(minMaxTree)
 	GaussianKernelSmoother(x,y,minMaxTree,weightTree)
 end
+
+# Treat as scalar for broadcasting, used by e.g. smooth
+Base.Broadcast.broadcastable(gks::GaussianKernelSmoother) = Ref(gks)
 
 
 
@@ -164,9 +167,9 @@ end
 
 
 """
-	(::GaussianKernelSmoother)(bandwidth, xeval; rtol=atol>0 ? 0 : 1e-3, atol=0)
+	smooth(gks::GaussianKernelSmoother, bandwidth, xeval; rtol=atol>0 ? 0 : 1e-3, atol=0)
 
-Calling a GaussianKernelSmoother object evaluates the smoothed function for the given `bandwidth` and `xeval`.
+Evaluate the Gaussian Kernel Smoother for the given `bandwidth` and `xeval`.
 The value of the smoothed function `f` at `x₀` is given by `f(x₀) := ∑ᵢyᵢwᵢ / ∑ᵢwᵢ`, where `wᵢ := exp(-(x₀-xᵢ)²/2bandwidth²)`.
 
 The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
@@ -174,11 +177,14 @@ The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper b
 # Examples
 ```julia-repl
 julia> g = GaussianKernelSmoother([0.0,1.0],[2.0,4.0]);
-julia> g(1, 0.9)
-3.197375320224904
+julia> smooth.(g, 1, [0.1, 0.5, 0.9])
+3-element Array{Float64,1}:
+ 2.802624679775096
+ 3.0
+ 3.197375320224904
 ```
 """
-function (gks::GaussianKernelSmoother)(bandwidth::Real, xeval::Real; atol=0, rtol=atol>0 ? 0 : 1e-3)
+function smooth(gks::GaussianKernelSmoother, bandwidth::Real, xeval::Real; atol=0, rtol=atol>0 ? 0 : 1e-3)
 	x,y = gks.x,gks.y
 	C = 1 / bandwidth
 	D = weightscale(x,C,xeval)
@@ -208,7 +214,7 @@ See also `GaussianKernelSmoother`.
 """
 function smooth(x::AbstractVector{T}, y::AbstractVector{T}, bandwidth, xeval; leafSize=10, kwargs...) where T
 	gks = GaussianKernelSmoother(x,y; leafSize=leafSize)
-	gks.(bandwidth, xeval; kwargs...)
+	smooth.(gks, bandwidth, xeval; kwargs...)
 end
 
 

@@ -93,7 +93,7 @@ end
 		@test density(gks,bw,xeval;rtol=1e-3) ≈ gtd atol=1e-12 rtol=1e-3
 		@test density(gks,bw,xeval;atol=1e-3) ≈ gtd atol=1e-3
 
-		@test gks.(bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
-		@test gks.(bw,xeval;atol=1e-3) ≈ gt atol=1e-3
+		@test smooth.(gks,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
+		@test smooth.(gks,bw,xeval;atol=1e-3) ≈ gt atol=1e-3
 	end
 end
