@@ -2,22 +2,24 @@
 	@testset "twopoints" begin
 		x = Float64[0,1]
 		xeval = Float64[0]
-		@test f(x,1/√2,xeval) ≈ [1+exp(-1)]
-		@test f(x,1,xeval) ≈ [1+exp(-1/2)]
-		@test f(x,√2,xeval) ≈ [1+exp(-1/4)]
+		C = 1/(√(2π)*length(x))
+		@test f(x,1/√2,xeval) ≈ [1+exp(-1)]*C*√2
+		@test f(x,1,xeval) ≈ [1+exp(-1/2)]*C
+		@test f(x,√2,xeval) ≈ [1+exp(-1/4)]*C/√2
 
-		@test f(x.+1,1,xeval.+1) ≈ [1+exp(-1/2)] # translation
-		@test f(x.*5,5,xeval) ≈ [1+exp(-1/2)] # scaling
-		@test f(-x,1,xeval) ≈ [1+exp(-1/2)] # mirror
+		@test f(x.+1,1,xeval.+1) ≈ [1+exp(-1/2)]*C # translation
+		@test f(x.*5,5,xeval) ≈ [1+exp(-1/2)]*C/5 # scaling
+		@test f(-x,1,xeval) ≈ [1+exp(-1/2)]*C # mirror
 	end
 
 	@testset "fewpoints" begin
 		x = [-4, 3.5, 10, 12]
 		xeval = [0.0]
 		bandwidths = 10.0.^(-3:3)
-		ground_truth = [1.9876622182340899236e-2660054, 2.9039118290719408157e-26601, 9.8771087215205620167e-267, 0.0025229537460853969623, 2.9569873254235829194, 3.9864263445510130571, 3.9998638788926746489]
+		ground_truth = [1.9824062450251952342e-2660052, 2.8962330179366389711e-26600, 9.8509906928407312942e-267, 0.00025162823020266138054, 0.029491681668065441022, 0.0039758850413688216497, 0.00039892870428519092503]
+
 		@test f(x,bandwidths,xeval) ≈ ground_truth rtol=1e-3
-		@test f(x.*-3.1.-7.8,bandwidths.*3.1,xeval.-7.8) ≈ ground_truth rtol=1e-3
+		@test f(x.*-3.1.-7.8,bandwidths.*3.1,xeval.-7.8) ≈ ground_truth/3.1 rtol=1e-3
 	end
 end
 
@@ -77,23 +79,26 @@ end
 	bandwidths = 10.0.^ [0,-1,1,-2,2,-3,3,-5,5,-10,10,-100,100]
 	@testset "bandwidth=$bw" for bw in bandwidths
 		gtd = density_reference(x,bw,xeval)
-		@test density(x,bw,xeval,rtol=1e-3) ≈ gtd atol=1e-12 rtol=1e-3
-		@test density(x,bw,xeval,rtol=1e-6) ≈ gtd atol=1e-12 rtol=1e-6
-		@test density(x,bw,xeval,rtol=1e-9) ≈ gtd atol=1e-12 rtol=1e-9
+
+		# TODO: make ≈ pointwise! Currently we are comparing vectors using norms
+
+		@test all(isapprox.(density(x,bw,xeval,rtol=1e-3), gtd; atol=1e-12, rtol=1e-3))
+		@test all(isapprox.(density(x,bw,xeval,rtol=1e-6), gtd; atol=1e-12, rtol=1e-6))
+		@test all(isapprox.(density(x,bw,xeval,rtol=1e-9), gtd; atol=1e-12, rtol=1e-9))
 
 		gt = smooth_reference(x,y,bw,xeval)
-		@test smooth(x,y,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
-		@test smooth(x,y,bw,xeval;rtol=1e-6) ≈ gt rtol=1e-6
-		@test smooth(x,y,bw,xeval;rtol=1e-9) ≈ gt rtol=1e-9
-		@test smooth(x,y,bw,xeval;atol=1e-1) ≈ gt atol=1e-1
-		@test smooth(x,y,bw,xeval;atol=1e-3) ≈ gt atol=1e-3
-		@test smooth(x,y,bw,xeval;atol=1e-6) ≈ gt atol=1e-6
+		@test all(isapprox.(smooth(x,y,bw,xeval;rtol=1e-3), gt; rtol=1e-3))
+		@test all(isapprox.(smooth(x,y,bw,xeval;rtol=1e-6), gt; rtol=1e-6))
+		@test all(isapprox.(smooth(x,y,bw,xeval;rtol=1e-9), gt; rtol=1e-9))
+		@test all(isapprox.(smooth(x,y,bw,xeval;atol=1e-1), gt; atol=1e-1))
+		@test all(isapprox.(smooth(x,y,bw,xeval;atol=1e-3), gt; atol=1e-3))
+		@test all(isapprox.(smooth(x,y,bw,xeval;atol=1e-6), gt; atol=1e-6))
 
 		gks = GaussianKernelSmoother(x,y)
-		@test density(gks,bw,xeval;rtol=1e-3) ≈ gtd atol=1e-12 rtol=1e-3
-		@test density(gks,bw,xeval;atol=1e-3) ≈ gtd atol=1e-3
+		@test all(isapprox.(density(gks,bw,xeval;rtol=1e-3), gtd; atol=1e-12, rtol=1e-3))
+		@test all(isapprox.(density(gks,bw,xeval;atol=1e-3), gtd; atol=1e-3))
 
-		@test smooth.(gks,bw,xeval;rtol=1e-3) ≈ gt rtol=1e-3
-		@test smooth.(gks,bw,xeval;atol=1e-3) ≈ gt atol=1e-3
+		@test all(isapprox.(smooth.(gks,bw,xeval;rtol=1e-3), gt; rtol=1e-3))
+		@test all(isapprox.(smooth.(gks,bw,xeval;atol=1e-3), gt; atol=1e-3))
 	end
 end

@@ -221,10 +221,10 @@ end
 
 
 
-function _density(x,weightTree::WeightTree,bandwidth,xeval; atol=1e-20, rtol=atol>1e-20 ? 0 : 1e-3)
+function _density(x,weightTree::WeightTree,bandwidth,scale,xeval; atol=1e-20, rtol=atol>1e-20 ? 0 : 1e-3)
 	C = 1 / bandwidth
-	lb,ub = densityapprox(x,weightTree,C,0,xeval;atol,rtol)
-	(lb+ub)/2
+	lb,ub = densityapprox(x,weightTree,C,0,xeval;atol=atol/scale,rtol)
+	(lb+ub)/2*scale
 end
 
 
@@ -232,7 +232,7 @@ end
 	density(x, bandwidth, xeval; leafSize=10, rtol=atol>1e-20 ? 0 : 1e-3, atol=1e-20)
 
 Evaluate the density of a Gaussian Kernel Smoother of a set of data points with coordinates `x`, with the specified `bandwidth`, at the coordinates in `xeval`.
-The value of the density `g` at `x₀` is given by `g(x₀) := ∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`.
+The value of the density `g` at `x₀` is given by `g(x₀) := C∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`, where `C` is a constant ensuring that `g` is a probability density function.
 
 The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
 
@@ -250,7 +250,8 @@ See also `smooth`, `GaussianKernelSmoother`.
 """
 function density(x::AbstractVector, bandwidth, xeval; leafSize=10, kwargs...)
 	x = issorted(x) ? x : sort(x)
-	_density.(Ref(x),Ref(WeightTree(x,leafSize)),bandwidth,xeval; kwargs...)
+	scale = 1 ./((sqrt(2π)*length(x)).*bandwidth)
+	_density.(Ref(x),Ref(WeightTree(x,leafSize)),bandwidth,scale,xeval; kwargs...)
 end
 
 
@@ -258,7 +259,7 @@ end
 	density(gks::GaussianKernelSmoother, bandwidth, xeval; leafSize=10, rtol=atol>1e-20 ? 0 : 1e-3, atol=1e-20)
 
 Evaluate the density of a Gaussian Kernel Smoother, with the specified `bandwidth`, at the coordinates in `xeval`.
-The value of the density `g` at `x₀` is given by `g(x₀) := ∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`.
+The value of the density `g` at `x₀` is given by `g(x₀) := C∑ᵢexp(-(x₀-xᵢ)²/2bandwidth²)`, where `C` is a constant ensuring that `g` is a probability density function.
 
 The accuracy of the result is controlled by `rtol` and `atol`. Lower and upper bounds `lb≤f(x₀)≤ub` are gradually improved until `isapprox(lb,ub;rtol=rtol,atol=atol)`.
 
@@ -275,5 +276,7 @@ julia> density.(g, 1.0, [0.1, 0.5, 0.9])
 ```
 See also `smooth`, `GaussianKernelSmoother`.
 """
-density(gks::GaussianKernelSmoother, bandwidth, xeval; kwargs...) =
-	_density.(Ref(gks.x),Ref(gks.weightTree),bandwidth,xeval; kwargs...)
+function density(gks::GaussianKernelSmoother, bandwidth, xeval; kwargs...)
+	scale = 1 ./((sqrt(2π)*length(gks.x)).*bandwidth)
+	_density.(Ref(gks.x),Ref(gks.weightTree),bandwidth,scale,xeval; kwargs...)
+end

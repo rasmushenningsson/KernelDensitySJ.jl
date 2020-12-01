@@ -88,13 +88,13 @@ function smooth_reference(x::AbstractVector{<:T}, y::AbstractVector{<:S}, bandwi
 	_smooth_reference.(Ref(x),Ref(y),c,xeval,Ref(w))
 end
 
-function _density_reference(x,c,xeval,w)
+function _density_reference(x,bandwidth,c,xeval,w)
 	w .= exp.(-c.*(x.-xeval).^2)
-	sum(w)
+	sum(w) / (sqrt(2π)*bandwidth*length(x))
 end
 
 function density_reference(x::AbstractVector{<:T}, bandwidth, xeval) where {T<:Real}
 	c = 1 ./(2 .* bandwidth.^2)
 	w = similar(x, promote_type(T,eltype(bandwidth),eltype(xeval)))
-	_density_reference.(Ref(x),c,xeval,Ref(w))
+	_density_reference.(Ref(x),bandwidth,c,xeval,Ref(w))
 end
