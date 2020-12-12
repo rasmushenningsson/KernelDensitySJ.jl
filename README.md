@@ -41,7 +41,7 @@ yd = density(px, bw, x)
 ![density](https://raw.githubusercontent.com/rasmushenningsson/KernelDensitySJ.jl/master/images/pl3.svg)
 
 
-If we also have some y values for each point
+If we also have y values for the points
 ```julia
 py = cos.(π.*px) .+ 0.2.*randn(40)
 ```
