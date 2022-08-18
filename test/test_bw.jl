@@ -63,16 +63,16 @@ end
 	N = 100
 	X = quantile.(Normal(), range(1/2N,stop=1-1/2N,length=N))
 
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^-4))≈0.05301544  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^-3))≈0.07877113  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^-2))≈0.1279672   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^-1))≈0.2092015   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^0 ))≈0.4747508   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^1 ))≈0.1394881   rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^2 ))≈0.03132362  rtol=0.1
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^3 ))≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-4); rtol=0.05)≈0.05301544  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-3); rtol=0.05)≈0.07877113  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-2); rtol=0.05)≈0.1279672   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^-1); rtol=0.05)≈0.2092015   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^0 ); rtol=0.05)≈0.4747508   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^1 ); rtol=0.05)≈0.1394881   rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^2 ); rtol=0.05)≈0.03132362  rtol=0.1
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^3 ); rtol=0.05)≈0.004705298 rtol=0.1 # NB: run with nb=10000000 to get accurate answer
 
-	@test bwsj(sign.(X).*abs.(X).^(2.0.^6))≈1.1579829602522003e-12 rtol=0.1 # NB: ground truth generated with bwsj_reference(; rtol=1e-24)
+	@test bwsj(sign.(X).*abs.(X).^(2.0.^6); rtol=0.05)≈1.1579829602522003e-12 rtol=0.1 # NB: ground truth generated with bwsj_reference(; rtol=1e-24)
 end
 
 @testset "outliers" begin
@@ -87,7 +87,7 @@ end
 	@test bwsj(vcat(X,Y2))≈0.1197213803664104 rtol=0.1
 
 	Y3 = 1e9.*sign.(randn(rng,10)) .+ randn(rng,10)
-	@test bwsj(vcat(X,Y3))≈0.12247926574875453 rtol=0.1
+	@test bwsj(vcat(X,Y3); rtol=0.05)≈0.12247926574875453 rtol=0.1
 end
 
 @testset "repeats" begin
