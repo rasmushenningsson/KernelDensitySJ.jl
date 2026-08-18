@@ -6,14 +6,15 @@ on:
   workflow_dispatch:
     inputs:
       lookback:
-        default: 3
+        description: "[DEPRECATED] No longer has any effect"
+        default: "3"
 permissions:
   actions: read
   checks: read
   contents: write
   deployments: read
-  issues: read
   discussions: read
+  issues: write
   packages: read
   pages: read
   pull-requests: read
@@ -25,9 +26,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
     runs-on: ubuntu-latest
     steps:
-      - uses: JuliaRegistries/TagBot@v1
+      - uses: JuliaRegistries/TagBot@304fc93e4623081443fee5b6317ac73b37923574 # v1.25.8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Edit the following line to reflect the actual name of the GitHub Secret containing your private key
           ssh: ${{ secrets.DOCUMENTER_KEY }}
-          # ssh: ${{ secrets.NAME_OF_MY_SSH_PRIVATE_KEY_SECRET }}
